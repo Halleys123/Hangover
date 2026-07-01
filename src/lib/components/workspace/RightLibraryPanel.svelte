@@ -219,8 +219,7 @@
 		{/if}
 	</div>
 {/if}
-		{
-			id: 'esp32', category: 'microcontroller', name: 'ESP32 DevKit V1', description: '3.3V Logic • WiFi/BT',
+
 			diagram: { theme: 'blue', pins: { left: [{ id: '3v3', label: '3V3', color: 'red' }, { id: 'en', label: 'EN', color: 'blue' }, { id: 'vp', label: 'VP', color: 'green' }, { id: 'vn', label: 'VN', color: 'green' }, { id: 'd34', label: 'D34', color: 'gray' }, { id: 'd35', label: 'D35', color: 'gray' }], right: [{ id: 'gnd', label: 'GND', color: 'gray' }, { id: 'd23', label: 'D23', color: 'blue' }, { id: 'd22', label: 'D22', color: 'blue' }, { id: 'tx0', label: 'TX0', color: 'purple' }, { id: 'rx0', label: 'RX0', color: 'purple' }, { id: 'd21', label: 'D21', color: 'blue' }] } }
 		},
 		{

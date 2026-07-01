@@ -147,9 +147,12 @@
 					</div>
 				{:else}
 					{#each datasheets as doc (doc._id)}
-					<button
+					<div
+						role="button"
+						tabindex="0"
 						onclick={() => viewDatasheet(doc._id)}
-						class="w-full text-left p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors group {selectedId === doc._id ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''}"
+						onkeydown={(e) => e.key === 'Enter' && viewDatasheet(doc._id)}
+						class="w-full text-left p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer group {selectedId === doc._id ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''}"
 					>
 						<div class="flex items-start gap-3">
 							<svg class="w-5 h-5 mt-0.5 text-red-400 shrink-0" fill="currentColor" viewBox="0 0 24 24">
@@ -186,7 +189,7 @@
 							{/each}
 						</div>
 						{/if}
-					</button>
+					</div>
 					{/each}
 				{/if}
 			</div>
