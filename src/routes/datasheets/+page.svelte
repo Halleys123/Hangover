@@ -212,7 +212,7 @@
 				<p class="text-gray-500 text-sm mt-1">Manage documents that AI relies on for extracting pinouts and schematic rules.</p>
 			</div>
 			<button
-				on:click={startUpload}
+				onclick={startUpload}
 				class="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition"
 			>
 				Upload PDF Datasheet
