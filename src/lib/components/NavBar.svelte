@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { authUser } from '$lib/stores/auth';
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 
 	interface Props {
 		activeLink?: 'workspace' | 'datasheets';
@@ -51,7 +52,7 @@
 
 	function logout() {
 		authUser.logout();
-		window.location.href = '/login';
+		goto('/login');
 	}
 </script>
 
