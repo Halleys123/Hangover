@@ -16,18 +16,31 @@
 		name: string;
 		size: string;
 		parsed: boolean;
+		status?: 'waiting' | 'processing' | 'completed' | 'failed';
+		error?: string;
 		uploadedAt: string;
 	}
+
+	interface Props {
+		workspaceId?: string;
+		projectDatasheets?: Sheet[];
+	}
+
+	let { workspaceId, projectDatasheets = $bindable([]) }: Props = $props();
 
 	let rightTab = $state<'components' | 'datasheets'>('components');
 	let personalComponents = $state<Comp[]>([]);
 	let catalogComponents = $state<Comp[]>([]);
-	let datasheets = $state<Sheet[]>([]);
+	let allDatasheets = $state<Sheet[]>([]);
 	let loadingComps = $state(true);
 	let loadingSheets = $state(true);
 	let componentSearchQuery = $state('');
 	let showCatalog = $state(false);
 	let addingId = $state<string | null>(null);
+	let showAttachModal = $state(false);
+	let attachingSheetId = $state<string | null>(null);
+
+	let availableDatasheets = $derived(allDatasheets.filter(d => !projectDatasheets.find(pd => pd._id === d._id)));
 
 	onMount(async () => {
 		const [personalRes, catalogRes, sheetsRes] = await Promise.allSettled([
@@ -37,7 +50,7 @@
 		]);
 		if (personalRes.status === 'fulfilled') personalComponents = personalRes.value;
 		if (catalogRes.status === 'fulfilled') catalogComponents = catalogRes.value;
-		if (sheetsRes.status === 'fulfilled') datasheets = sheetsRes.value;
+		if (sheetsRes.status === 'fulfilled') allDatasheets = sheetsRes.value;
 		loadingComps = false;
 		loadingSheets = false;
 	});
@@ -54,6 +67,32 @@
 			personalComponents = [...personalComponents, added];
 		} catch { } finally {
 			addingId = null;
+		}
+	}
+
+	async function attachDatasheet(sheet: Sheet) {
+		if (!workspaceId) return;
+		attachingSheetId = sheet._id;
+		try {
+			await api.post(`/projects/${workspaceId}/datasheets`, { datasheetId: sheet._id });
+			projectDatasheets = [...projectDatasheets, sheet];
+		} catch (err) {
+			console.error(err);
+		} finally {
+			attachingSheetId = null;
+			showAttachModal = false;
+		}
+	}
+
+	async function detachDatasheet(sheetId: string, e: MouseEvent) {
+		e.preventDefault();
+		e.stopPropagation();
+		if (!workspaceId) return;
+		try {
+			await api.delete(`/projects/${workspaceId}/datasheets/${sheetId}`);
+			projectDatasheets = projectDatasheets.filter(d => d._id !== sheetId);
+		} catch (err) {
+			console.error(err);
 		}
 	}
 
@@ -182,36 +221,73 @@
 {:else}
 	<!-- Datasheets Tab -->
 	<div class="p-3 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 transition-colors">
+		<button onclick={() => (showAttachModal = !showAttachModal)} class="flex items-center justify-center gap-2 w-full py-2 bg-slate-800 dark:bg-zinc-800 text-white text-xs font-medium rounded hover:bg-slate-700 dark:hover:bg-zinc-700 transition mb-2">
+			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+			Attach from Library
+		</button>
 		<a href="/datasheets" class="flex items-center justify-center gap-2 w-full py-2 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition">
 			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-			Upload &amp; Manage Datasheets
+			Upload New Datasheet
 		</a>
 	</div>
+
+	{#if showAttachModal}
+		<div class="p-3 border-b border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900/50">
+			<h4 class="text-xs font-bold text-slate-700 dark:text-zinc-300 mb-2">Available in Library</h4>
+			{#if availableDatasheets.length === 0}
+				<p class="text-[10px] text-slate-500 dark:text-zinc-500 italic">No more datasheets to attach.</p>
+			{:else}
+				<div class="max-h-40 overflow-y-auto space-y-1.5">
+					{#each availableDatasheets as sheet (sheet._id)}
+						<div class="flex items-center justify-between p-2 bg-white dark:bg-zinc-800 rounded border border-slate-200 dark:border-zinc-700">
+							<span class="text-xs font-medium text-slate-700 dark:text-zinc-300 truncate mr-2" title={sheet.name}>{sheet.name}</span>
+							<button onclick={() => attachDatasheet(sheet)} disabled={attachingSheetId === sheet._id} class="shrink-0 text-blue-600 dark:text-blue-400 text-[10px] font-bold hover:underline disabled:opacity-50">
+								{attachingSheetId === sheet._id ? '…' : 'Attach'}
+							</button>
+						</div>
+					{/each}
+				</div>
+			{/if}
+		</div>
+	{/if}
 
 	<div class="flex-1 overflow-y-auto p-3 transition-colors">
 		{#if loadingSheets}
 			{#each [1,2] as i (i)}<div class="mb-2 h-16 bg-slate-100 dark:bg-zinc-800 rounded animate-pulse"></div>{/each}
-		{:else if datasheets.length === 0}
+		{:else if projectDatasheets.length === 0}
 			<div class="text-center py-8 text-slate-400 dark:text-zinc-500">
 				<svg class="w-8 h-8 mx-auto mb-2 text-slate-300 dark:text-zinc-600" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2l5 5h-5V4z"/></svg>
-				<p class="text-xs">No datasheets uploaded yet.</p>
-				<a href="/datasheets" class="text-blue-500 dark:text-blue-400 text-xs hover:underline mt-1 inline-block">Upload one →</a>
+				<p class="text-xs">No datasheets attached to this project.</p>
+				<button onclick={() => (showAttachModal = true)} class="text-blue-500 dark:text-blue-400 text-xs hover:underline mt-1 inline-block">Attach one →</button>
 			</div>
 		{:else}
 			<h3 class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">Project Documents</h3>
 			<div class="space-y-2">
-				{#each datasheets as doc (doc._id)}
-				<a href="/datasheets" class="block p-2.5 border border-slate-200 dark:border-zinc-800 rounded bg-white dark:bg-zinc-800/80 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-sm transition group">
+				{#each projectDatasheets as doc (doc._id)}
+				<a href="/datasheets" class="block relative p-2.5 border border-slate-200 dark:border-zinc-800 rounded bg-white dark:bg-zinc-800/80 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-sm transition group">
+					<button onclick={(e) => detachDatasheet(doc._id, e)} class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors" title="Detach from project">
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+					</button>
 					<div class="flex items-start gap-2">
 						<svg class="w-4 h-4 mt-0.5 text-rose-400 dark:text-rose-500 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2l5 5h-5V4z"/></svg>
 						<div class="flex-1 min-w-0">
 							<p class="text-xs font-medium text-slate-800 dark:text-zinc-200 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400">{doc.name}</p>
 							<div class="flex items-center gap-1.5 mt-0.5">
 								<span class="text-[10px] text-slate-400 dark:text-zinc-500">{doc.size}</span>
-								{#if doc.parsed}
-								<span class="text-[9px] font-semibold text-emerald-600 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-1 py-0.5 rounded">Parsed</span>
+								{#if doc.status === 'waiting'}
+									<span class="text-[9px] font-semibold text-purple-600 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/60 px-1 py-0.5 rounded flex items-center gap-1">
+										<span class="w-1 h-1 rounded-full bg-purple-500 animate-ping"></span> Waiting
+									</span>
+								{:else if doc.status === 'processing'}
+									<span class="text-[9px] font-semibold text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-1 py-0.5 rounded flex items-center gap-1 animate-pulse">
+										<span class="w-1 h-1 rounded-full bg-blue-500 animate-spin"></span> Processing…
+									</span>
+								{:else if doc.status === 'failed'}
+									<span class="text-[9px] font-semibold text-rose-600 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 px-1 py-0.5 rounded" title={doc.error || 'Failed'}>Failed</span>
+								{:else if doc.parsed || doc.status === 'completed'}
+									<span class="text-[9px] font-semibold text-emerald-600 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-1 py-0.5 rounded">Parsed</span>
 								{:else}
-								<span class="text-[9px] font-semibold text-amber-600 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-1 py-0.5 rounded">Processing…</span>
+									<span class="text-[9px] font-semibold text-amber-600 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-1 py-0.5 rounded">Processing…</span>
 								{/if}
 							</div>
 						</div>
