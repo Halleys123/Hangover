@@ -1,14 +1,20 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import NavBar from '$lib/components/NavBar.svelte';
 	import { authUser, getToken } from '$lib/stores/auth';
 	import { api } from '$lib/api';
+	import { goto } from '$app/navigation';
+	import ExtractionReviewModal from '$lib/components/datasheets/ExtractionReviewModal.svelte';
 
 	interface Datasheet {
 		_id: string;
 		name: string;
 		size: string;
 		parsed: boolean;
+		status?: 'waiting' | 'processing' | 'completed' | 'failed';
+		error?: string;
+		verificationStatus?: 'unverified' | 'accepted' | 'rejected';
+		userNotes?: string;
 		uploadedAt: string;
 		cogneeConfig: Record<string, unknown> | null;
 	}
@@ -20,16 +26,37 @@
 	let pdfBlobUrl = $state<string | null>(null);
 	let loadingPdf = $state(false);
 	let uploadError = $state('');
+	let pendingFile = $state<File | null>(null);
+	let reviewModalSheet = $state<Datasheet | null>(null);
+
+	let pollTimer: any = null;
 
 	onMount(async () => {
-		if (!$authUser) { window.location.href = '/login'; return; }
+		if (!$authUser) { goto('/login'); return; }
 		try {
 			datasheets = await api.get<Datasheet[]>('/datasheets');
 		} catch { }
 		finally { loading = false; }
+
+		pollTimer = setInterval(async () => {
+			if (datasheets.some(d => d.status === 'waiting' || d.status === 'processing' || (!d.parsed && d.status !== 'failed'))) {
+				try {
+					const updated = await api.get<Datasheet[]>('/datasheets');
+					datasheets = updated;
+					if (selectedId) {
+						// Optionally update selected item if needed
+					}
+				} catch { }
+			}
+		}, 3000);
+	});
+
+	onDestroy(() => {
+		if (pollTimer) clearInterval(pollTimer);
 	});
 
 	async function viewDatasheet(id: string) {
+		if (pendingFile) cancelUpload();
 		if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl);
 		selectedId = id;
 		loadingPdf = true;
@@ -48,23 +75,42 @@
 		}
 	}
 
-	async function handleUpload(e: Event) {
+	function handleFileSelect(e: Event) {
 		const input = e.target as HTMLInputElement;
 		const file = input.files?.[0];
 		if (!file) return;
+		
 		uploadError = '';
+		if (pdfBlobUrl && !selectedId) URL.revokeObjectURL(pdfBlobUrl);
+		pdfBlobUrl = URL.createObjectURL(file);
+		pendingFile = file;
+		selectedId = null;
+		input.value = '';
+	}
+
+	async function confirmUpload() {
+		if (!pendingFile) return;
 		uploading = true;
+		uploadError = '';
 		try {
 			const form = new FormData();
-			form.append('file', file);
+			form.append('file', pendingFile);
 			const sheet = await api.upload<Datasheet>('/datasheets', form);
 			datasheets = [sheet, ...datasheets];
+			pendingFile = null;
+			selectedId = sheet._id;
 		} catch (err: any) {
 			uploadError = err.message;
 		} finally {
 			uploading = false;
-			input.value = '';
 		}
+	}
+
+	function cancelUpload() {
+		pendingFile = null;
+		if (pdfBlobUrl && !selectedId) URL.revokeObjectURL(pdfBlobUrl);
+		pdfBlobUrl = null;
+		uploadError = '';
 	}
 
 	async function deleteDatasheet(id: string, e: MouseEvent) {
@@ -87,7 +133,7 @@
 
 <!-- DATASHEET INGESTION & LIBRARY PAGE -->
 <div class="h-screen flex flex-col bg-slate-50 dark:bg-zinc-950 transition-colors duration-200 overflow-hidden">
-	<NavBar activeLink="datasheets" showBack={true} onLogoClick={() => (window.location.href = '/')} />
+	<NavBar activeLink="datasheets" showBack={true} onLogoClick={() => goto('/')} />
 
 	<div class="flex-1 flex overflow-hidden">
 		<!-- Left: PDF Viewer -->
@@ -100,7 +146,16 @@
 					</div>
 				</div>
 			{:else if pdfBlobUrl}
-				<embed src={pdfBlobUrl} type="application/pdf" class="w-full h-full" />
+				<div class="relative w-full h-full">
+					<button 
+						onclick={() => { URL.revokeObjectURL(pdfBlobUrl!); pdfBlobUrl = null; selectedId = null; if (pendingFile) cancelUpload(); }}
+						class="absolute top-4 right-6 z-10 px-4 py-2 bg-slate-900/70 hover:bg-rose-600 text-white rounded-lg backdrop-blur shadow-lg text-xs font-bold flex items-center gap-2 transition-colors border border-white/10"
+					>
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+						Close PDF
+					</button>
+					<embed src={pdfBlobUrl} type="application/pdf" class="w-full h-full" />
+				</div>
 			{:else}
 				<div class="flex-1 flex flex-col items-center justify-center text-gray-300 select-none">
 					<svg class="w-20 h-20 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -113,34 +168,48 @@
 		</div>
 
 		<!-- Right: List + Upload -->
-		<div class="w-80 flex flex-col bg-white overflow-hidden shrink-0">
-			<div class="p-4 border-b border-gray-200">
-				<h2 class="text-sm font-semibold text-gray-900 mb-3">Datasheet Library</h2>
+		<div class="w-80 flex flex-col bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 overflow-hidden shrink-0 transition-colors">
+			<div class="p-4 border-b border-gray-200 dark:border-zinc-800">
+				<h2 class="text-sm font-semibold text-gray-900 dark:text-zinc-100 mb-3">Datasheet Library</h2>
 
 				{#if uploadError}
-				<div class="mb-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">{uploadError}</div>
+				<div class="mb-2 p-2 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 rounded text-xs text-red-600 dark:text-red-400">{uploadError}</div>
 				{/if}
 
-				<label class="flex items-center justify-center gap-2 w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition cursor-pointer {uploading ? 'opacity-60 pointer-events-none' : ''}">
-					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-					</svg>
-					{uploading ? 'Uploading…' : 'Upload PDF Datasheet'}
-					<input type="file" accept=".pdf" class="hidden" onchange={handleUpload} disabled={uploading} />
-				</label>
+				{#if pendingFile}
+					<div class="flex flex-col gap-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-900/50 mb-3">
+						<p class="text-xs text-blue-900 dark:text-blue-200 font-medium truncate">Previewing: {pendingFile.name}</p>
+						<div class="flex gap-2">
+							<button onclick={confirmUpload} disabled={uploading} class="flex-1 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 disabled:opacity-50 transition">
+								{uploading ? 'Saving…' : 'Confirm Upload'}
+							</button>
+							<button onclick={cancelUpload} disabled={uploading} class="px-3 py-1.5 bg-slate-200 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-xs font-medium rounded hover:bg-slate-300 dark:hover:bg-zinc-700 disabled:opacity-50 transition">
+								Cancel
+							</button>
+						</div>
+					</div>
+				{:else}
+					<label class="flex items-center justify-center gap-2 w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition cursor-pointer {uploading ? 'opacity-60 pointer-events-none' : ''}">
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+						</svg>
+						Upload PDF Datasheet
+						<input type="file" accept=".pdf" class="hidden" onchange={handleFileSelect} disabled={uploading} />
+					</label>
+				{/if}
 			</div>
 
 			<div class="flex-1 overflow-y-auto">
 				{#if loading}
 					{#each [1, 2, 3, 4] as i (i)}
-					<div class="p-4 border-b border-gray-100 animate-pulse">
-						<div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-						<div class="h-3 bg-gray-100 rounded w-1/2"></div>
+					<div class="p-4 border-b border-gray-100 dark:border-zinc-800 animate-pulse">
+						<div class="h-4 bg-gray-200 dark:bg-zinc-800 rounded w-3/4 mb-2"></div>
+						<div class="h-3 bg-gray-100 dark:bg-zinc-700 rounded w-1/2"></div>
 					</div>
 					{/each}
 				{:else if datasheets.length === 0}
-					<div class="p-8 text-center text-gray-400">
-						<svg class="w-10 h-10 mx-auto mb-3 text-gray-300" fill="currentColor" viewBox="0 0 24 24">
+					<div class="p-8 text-center text-gray-400 dark:text-zinc-500">
+						<svg class="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-zinc-600" fill="currentColor" viewBox="0 0 24 24">
 							<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2l5 5h-5V4z"/>
 						</svg>
 						<p class="text-sm font-medium">No datasheets yet</p>
@@ -153,27 +222,43 @@
 						tabindex="0"
 						onclick={() => viewDatasheet(doc._id)}
 						onkeydown={(e) => e.key === 'Enter' && viewDatasheet(doc._id)}
-						class="w-full text-left p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer group {selectedId === doc._id ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''}"
+						class="w-full text-left p-4 border-b border-gray-100 dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-800/80 transition-colors cursor-pointer group {selectedId === doc._id ? 'bg-blue-50 dark:bg-zinc-800 border-l-2 border-l-blue-500 dark:border-l-blue-400' : ''}"
 					>
 						<div class="flex items-start gap-3">
 							<svg class="w-5 h-5 mt-0.5 text-red-400 shrink-0" fill="currentColor" viewBox="0 0 24 24">
 								<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2l5 5h-5V4zM8 14h8v2H8v-2zm0-4h8v2H8v-2z"/>
 							</svg>
 							<div class="flex-1 min-w-0">
-								<p class="text-sm font-medium text-gray-900 truncate {selectedId === doc._id ? 'text-blue-700' : ''}">{doc.name}</p>
+								<p class="text-sm font-medium text-gray-900 dark:text-zinc-100 truncate {selectedId === doc._id ? 'text-blue-700 dark:text-blue-400' : ''}">{doc.name}</p>
 								<div class="flex items-center gap-2 mt-1 flex-wrap">
-									<span class="text-xs text-gray-400">{doc.size}</span>
-									{#if doc.parsed}
-									<span class="text-[10px] font-semibold text-green-700 bg-green-50 px-1.5 py-0.5 rounded border border-green-200">Parsed</span>
+									<span class="text-xs text-gray-400 dark:text-zinc-500">{doc.size}</span>
+									{#if doc.status === 'waiting'}
+										<span class="text-[10px] font-semibold text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/40 px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-900/60 flex items-center gap-1">
+											<span class="w-1.5 h-1.5 rounded-full bg-purple-500 animate-ping"></span> Waiting in Queue
+										</span>
+									{:else if doc.status === 'processing'}
+										<span class="text-[10px] font-semibold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-900/60 flex items-center gap-1 animate-pulse">
+											<span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-spin"></span> Processing…
+										</span>
+									{:else if doc.status === 'failed'}
+										<span class="text-[10px] font-semibold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-1.5 py-0.5 rounded border border-rose-200 dark:border-rose-900/60" title={doc.error || 'Extraction failed'}>Failed</span>
+									{:else if doc.parsed || doc.status === 'completed'}
+										{#if doc.verificationStatus === 'accepted'}
+											<span class="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-900/60">Verified</span>
+										{:else if doc.verificationStatus === 'rejected'}
+											<span class="text-[10px] font-semibold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 px-1.5 py-0.5 rounded border border-rose-200 dark:border-rose-900/60">Discarded</span>
+										{:else}
+											<span class="text-[10px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-900/60">Parsed</span>
+										{/if}
 									{:else}
-									<span class="text-[10px] font-semibold text-yellow-700 bg-yellow-50 px-1.5 py-0.5 rounded border border-yellow-200">Processing…</span>
+										<span class="text-[10px] font-semibold text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-950/40 px-1.5 py-0.5 rounded border border-yellow-200 dark:border-yellow-900/60">Processing…</span>
 									{/if}
 								</div>
-								<p class="text-xs text-gray-400 mt-1">{formatDate(doc.uploadedAt)}</p>
+								<p class="text-xs text-gray-400 dark:text-zinc-500 mt-1">{formatDate(doc.uploadedAt)}</p>
 							</div>
 							<button
 								onclick={(e) => deleteDatasheet(doc._id, e)}
-								class="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-red-500 transition-all rounded shrink-0"
+								class="opacity-0 group-hover:opacity-100 p-1 text-gray-300 dark:text-zinc-600 hover:text-red-500 dark:hover:text-red-400 transition-all rounded shrink-0"
 								title="Delete"
 							>
 								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -182,12 +267,15 @@
 							</button>
 						</div>
 
-						{#if doc.cogneeConfig}
-						<div class="mt-2 ml-8 p-2 bg-gray-50 rounded text-xs text-gray-500 text-left">
-							<p class="font-medium text-gray-600 mb-1">Extracted specs</p>
-							{#each Object.entries(doc.cogneeConfig).slice(0, 3) as [k, v]}
-							<p><span class="text-gray-400">{k}:</span> {JSON.stringify(v)}</p>
-							{/each}
+						{#if (doc.parsed || doc.status === 'completed') && doc.cogneeConfig}
+						<div class="mt-2.5 ml-8">
+							<button
+								onclick={(e) => { e.stopPropagation(); reviewModalSheet = doc; }}
+								class="px-2.5 py-1 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-indigo-950/50 dark:to-blue-950/50 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-indigo-900/60 text-indigo-700 dark:text-indigo-300 rounded-lg border border-indigo-200/60 dark:border-indigo-800/60 text-[11px] font-semibold flex items-center gap-1.5 transition shadow-2xs"
+							>
+								<svg class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+								Review Extracted Knowledge
+							</button>
 						</div>
 						{/if}
 					</div>
@@ -196,6 +284,14 @@
 			</div>
 		</div>
 	</div>
+
+	<ExtractionReviewModal
+		datasheet={reviewModalSheet}
+		onClose={() => (reviewModalSheet = null)}
+		onUpdated={(updated) => {
+			datasheets = datasheets.map(d => d._id === updated._id ? updated : d);
+		}}
+	/>
 </div>
 
 <style>
