@@ -1,65 +1,53 @@
-# Svelte library
+# Hardware Prototyping Copilot UI
 
-Everything you need to build a Svelte library, powered by [`sv`](https://npmjs.com/package/sv).
+A modern, interactive web-based UI for designing hardware circuits and prototypes with an integrated AI assistant. Built with SvelteKit and featuring a canvas-based component editor, intelligent circuit analysis, and datasheet management.
 
-Read more about creating a library [in the docs](https://svelte.dev/docs/kit/packaging).
+## Tech Stack
 
-## Creating a project
+- **Framework**: [SvelteKit](https://kit.svelte.dev/) with TypeScript
+- **Canvas Rendering**: [@xyflow/svelte](https://www.xyflow.com/) for node-based circuit visualization
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/) for responsive UI design
+- **Build & Deploy**: Static site generation with [@sveltejs/adapter-static](https://kit.svelte.dev/docs/adapters)
+- **State Management**: Svelte stores (writable) for reactive component and canvas state
 
-If you're seeing this, you've probably already done this step. Congrats!
+## Getting Started
+
+### Prerequisites
+
+- Node.js 22+ and npm
+
+### Installation
 
 ```sh
-# create a new project in the current directory
-npx sv create
-
-# create a new project in my-app
-npx sv create my-app
+npm install
 ```
 
-To recreate this project with the same configuration:
-
-```sh
-# recreate this project
-npx sv@0.16.1 create --template library --types ts --add tailwindcss="plugins:none" --install npm ./
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+### Development
 
 ```sh
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-Everything inside `src/lib` is part of your library, everything inside `src/routes` can be used as a showcase or preview app.
+The app will be available at `http://localhost:5176`
 
-## Building
-
-To build your library:
-
-```sh
-npm pack
-```
-
-To create a production version of your showcase app:
+### Building for Production
 
 ```sh
 npm run build
 ```
 
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
-
-## Publishing
-
-Go into the `package.json` and give your package the desired name through the `"name"` option. Also consider adding a `"license"` field and point it to a `LICENSE` file which you can create from a template (one popular option is the [MIT license](https://opensource.org/license/mit/)).
-
-To publish your library to [npm](https://www.npmjs.com):
+The production build is statically prerendered and ready to deploy to any static hosting service.
 
 ```sh
-npm publish
+npm run preview
 ```
+
+## Usage
+
+1. **Add Components**: Drag items from the right library panel onto the canvas
+2. **Connect Components**: Click and drag between pins to create connections
+3. **Zoom & Pan**: Use zoom buttons or scroll to navigate the canvas
+4. **AI Assistance**: Type in the left chat panel for circuit suggestions
+5. **Save Design**: Designs are persisted and accessible from the workspace list
+6. **Toggle Lock**: Prevent accidental modifications with the lock button
+7. **Fullscreen**: Maximize canvas for detailed editing
