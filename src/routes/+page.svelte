@@ -38,6 +38,34 @@
 	let inputValue = $state('');
 	let searchQuery = $state('');
 
+	// Resizable / collapsible left panel
+	let leftWidth = $state(400);
+	let leftCollapsed = $state(false);
+	let isDragging = $state(false);
+
+	const MIN_PANEL_WIDTH = 260;
+	const MAX_PANEL_WIDTH = 600;
+	const COLLAPSE_THRESHOLD = 150;
+
+	function startDrag() {
+		isDragging = true;
+	}
+
+	function handlePointerMove(e: PointerEvent) {
+		if (!isDragging) return;
+		const w = e.clientX;
+		if (w < COLLAPSE_THRESHOLD) {
+			leftCollapsed = true;
+		} else {
+			leftCollapsed = false;
+			leftWidth = Math.min(Math.max(w, MIN_PANEL_WIDTH), MAX_PANEL_WIDTH);
+		}
+	}
+
+	function handlePointerUp() {
+		isDragging = false;
+	}
+
 	let filteredProjects = $derived(
 		projects.filter(
 			(p) =>
@@ -75,6 +103,8 @@
 	}
 </script>
 
+<svelte:window on:pointermove={handlePointerMove} on:pointerup={handlePointerUp} />
+
 <div class="min-h-screen flex flex-col bg-white">
 	<!-- Top Navigation -->
 	<nav class="bg-white border-b border-gray-200">
@@ -88,7 +118,7 @@
 				<h1 class="text-xl font-bold text-gray-900">Hardware Prototyping Copilot</h1>
 			</div>
 			<div class="flex items-center gap-6">
-				<a href="#" class="text-blue-600 font-medium border-b-2 border-blue-600 pb-5 -mb-5">Workspace</a>
+				<a href="/workspace" class="text-blue-600 font-medium border-b-2 border-blue-600 pb-5 -mb-5">Workspace</a>
 				<a href="/datasheets" class="text-gray-500 font-medium hover:text-gray-900">Datasheets</a>
 				<button
 					on:click={startNewProject}
@@ -102,7 +132,18 @@
 
 	<div class="flex-1 flex gap-0 h-[calc(100vh-73px)]">
 		<!-- Left: AI Chat Interface -->
-		<div class="w-[400px] flex flex-col border-r border-gray-200 bg-[#FAFAFA]">
+		{#if leftCollapsed}
+			<button
+				on:click={() => (leftCollapsed = false)}
+				class="w-6 shrink-0 flex items-center justify-center border-r border-gray-200 bg-white hover:bg-gray-50 group"
+				title="Show AI Copilot panel"
+			>
+				<svg class="w-4 h-4 text-gray-400 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+				</svg>
+			</button>
+		{:else}
+		<div class="flex flex-col border-r border-gray-200 bg-[#FAFAFA] shrink-0" style="width: {leftWidth}px;">
 			<!-- Chat Header -->
 			<div class="px-4 py-3 border-b border-gray-200 flex items-center gap-2 bg-white">
 				<svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
@@ -160,6 +201,12 @@
 				</form>
 			</div>
 		</div>
+		<!-- Left Divider -->
+		<div
+			class="w-1 shrink-0 cursor-col-resize bg-gray-200 hover:bg-blue-400 active:bg-blue-500 transition-colors"
+			on:pointerdown={startDrag}
+		></div>
+		{/if}
 
 		<!-- Right: Projects List -->
 		<div class="flex-1 bg-gray-50 p-8 overflow-y-auto w-full">
