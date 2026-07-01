@@ -86,12 +86,12 @@
 </script>
 
 <!-- DATASHEET INGESTION & LIBRARY PAGE -->
-<div class="h-screen flex flex-col bg-slate-50 dark:bg-slate-950 transition-colors duration-200 overflow-hidden">
+<div class="h-screen flex flex-col bg-slate-50 dark:bg-zinc-950 transition-colors duration-200 overflow-hidden">
 	<NavBar activeLink="datasheets" showBack={true} onLogoClick={() => (window.location.href = '/')} />
 
 	<div class="flex-1 flex overflow-hidden">
 		<!-- Left: PDF Viewer -->
-		<div class="flex-1 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 overflow-hidden">
+		<div class="flex-1 flex flex-col bg-white dark:bg-zinc-900 border-r border-slate-200 dark:border-zinc-800 overflow-hidden">
 			{#if loadingPdf}
 				<div class="flex-1 flex items-center justify-center">
 					<div class="flex flex-col items-center gap-3 text-gray-400">

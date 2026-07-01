@@ -269,7 +269,7 @@
 />
 
 <!-- MAIN WORKSPACE CANVAS PAGE -->
-<div class="h-screen flex flex-col bg-white dark:bg-slate-950 overflow-hidden text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200">
+<div class="h-screen flex flex-col bg-white dark:bg-zinc-950 overflow-hidden text-slate-900 dark:text-zinc-100 font-sans transition-colors duration-200">
     {#if !isFullscreen}
         <NavBar
             activeLink="workspace"
@@ -304,11 +304,11 @@
             </button>
         {:else}
             <div
-                class="flex flex-col border-r border-slate-200 dark:border-slate-800 bg-[#FAFAFA] dark:bg-slate-900 shrink-0 min-h-0 transition-colors"
+                class="flex flex-col border-r border-slate-200 dark:border-zinc-800 bg-[#FAFAFA] dark:bg-zinc-900 shrink-0 min-h-0 transition-colors"
                 style="width: {leftWidth}px;"
             >
                 <div
-                    class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white transition-colors"
+                    class="px-4 py-3 border-b border-slate-200 dark:border-zinc-800 flex items-center gap-2 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white transition-colors"
                 >
                     <svg
                         class="w-5 h-5 text-blue-600 dark:text-blue-400"
@@ -324,13 +324,13 @@
                 <AIChatPanel bind:isPopoverOpen />
             </div>
             <div
-                class="w-1 shrink-0 cursor-col-resize bg-slate-200 dark:bg-slate-800 hover:bg-blue-400 active:bg-blue-500 transition-colors"
+                class="w-1 shrink-0 cursor-col-resize bg-slate-200 dark:bg-zinc-800 hover:bg-blue-400 active:bg-blue-500 transition-colors"
                 onpointerdown={() => startDrag("left")}
             ></div>
         {/if}
 
         <div
-            class="flex-1 bg-[#FAFAFA] dark:bg-slate-950 relative overflow-hidden flex flex-col z-0 transition-colors"
+            class="flex-1 bg-[#FAFAFA] dark:bg-zinc-950 relative overflow-hidden flex flex-col z-0 transition-colors"
         >
             <SvelteFlowProvider>
                 <CanvasInner
@@ -350,11 +350,11 @@
         {#if rightCollapsed}
             <button
                 onclick={() => (rightCollapsed = false)}
-                class="w-6 shrink-0 flex items-center justify-center border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 group transition-colors"
+                class="w-6 shrink-0 flex items-center justify-center border-l border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 group transition-colors"
                 title="Show Components panel"
             >
                 <svg
-                    class="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                    class="w-4 h-4 text-slate-400 dark:text-zinc-500 group-hover:text-blue-600 dark:group-hover:text-blue-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -369,11 +369,11 @@
             </button>
         {:else}
             <div
-                class="w-1 shrink-0 cursor-col-resize bg-slate-200 dark:bg-slate-800 hover:bg-blue-400 active:bg-blue-500 transition-colors"
+                class="w-1 shrink-0 cursor-col-resize bg-slate-200 dark:bg-zinc-800 hover:bg-blue-400 active:bg-blue-500 transition-colors"
                 onpointerdown={() => startDrag("right")}
             ></div>
             <div
-                class="bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col z-20 shrink-0 min-h-0 text-slate-900 dark:text-white transition-colors"
+                class="bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 flex flex-col z-20 shrink-0 min-h-0 text-slate-900 dark:text-white transition-colors"
                 style="width: {rightWidth}px;"
             >
                 <RightLibraryPanel />

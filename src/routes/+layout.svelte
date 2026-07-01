@@ -16,7 +16,7 @@
 </script>
 
 <!-- ROOT LAYOUT WRAPPER -->
-<div class="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200">
+<div class="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 font-sans transition-colors duration-200">
 	{@render children()}
 </div>
 

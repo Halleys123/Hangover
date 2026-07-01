@@ -56,7 +56,7 @@
 </script>
 
 <!-- TOP NAVIGATION BAR COMPONENT -->
-<nav class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-40 transition-colors duration-200">
+<nav class="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-zinc-800 sticky top-0 z-40 transition-colors duration-200">
 	<div class="{wide ? 'w-full' : 'max-w-7xl mx-auto'} px-6 {compact ? 'py-3' : 'py-3.5'} flex items-center justify-between">
 		
 		<!-- BRAND LOGO & OPTIONAL BACK BUTTON -->
@@ -65,7 +65,7 @@
 				<button
 					onclick={handleBack}
 					title="Go Back"
-					class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-slate-200/60 dark:border-slate-700"
+					class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 transition-all border border-slate-200/60 dark:border-zinc-700"
 				>
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
 					Back
@@ -91,13 +91,13 @@
 				href="/workspace"
 				class={activeLink === 'workspace'
 					? `text-indigo-600 dark:text-indigo-400 font-semibold border-b-2 border-indigo-600 dark:border-indigo-400 ${compact ? 'pb-3.5 -mb-3.5' : 'pb-4 -mb-4'}`
-					: 'text-slate-500 dark:text-slate-400 font-medium hover:text-slate-900 dark:hover:text-white transition-colors'}
+					: 'text-slate-500 dark:text-zinc-400 font-medium hover:text-slate-900 dark:hover:text-white transition-colors'}
 			>Workspace</a>
 			<a
 				href="/datasheets"
 				class={activeLink === 'datasheets'
 					? `text-indigo-600 dark:text-indigo-400 font-semibold border-b-2 border-indigo-600 dark:border-indigo-400 ${compact ? 'pb-3.5 -mb-3.5' : 'pb-4 -mb-4'}`
-					: 'text-slate-500 dark:text-slate-400 font-medium hover:text-slate-900 dark:hover:text-white transition-colors'}
+					: 'text-slate-500 dark:text-zinc-400 font-medium hover:text-slate-900 dark:hover:text-white transition-colors'}
 			>Datasheets</a>
 
 			{#if actionLabel}
@@ -113,7 +113,7 @@
 			<button
 				onclick={toggleTheme}
 				title="Toggle Dark Mode"
-				class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+				class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-zinc-700"
 			>
 				{#if isDark}
 					<!-- Sun Icon for Dark Mode -->
@@ -130,21 +130,21 @@
 
 			<!-- USER PROFILE SECTION -->
 			{#if $authUser}
-				<div class="flex items-center gap-3 border-l border-slate-200/80 dark:border-slate-800 pl-6">
+				<div class="flex items-center gap-3 border-l border-slate-200/80 dark:border-zinc-800 pl-6">
 					<div class="flex items-center gap-2">
-						<div class="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-xs font-semibold text-slate-700 dark:text-slate-300">
+						<div class="w-7 h-7 rounded-full bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 flex items-center justify-center text-xs font-semibold text-slate-700 dark:text-zinc-300">
 							{$authUser.name ? $authUser.name[0].toUpperCase() : 'U'}
 						</div>
-						<span class="text-sm text-slate-700 dark:text-slate-300 font-medium">{$authUser.name}</span>
+						<span class="text-sm text-slate-700 dark:text-zinc-300 font-medium">{$authUser.name}</span>
 					</div>
 					<button
 						onclick={logout}
-						class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all border border-transparent hover:border-rose-200/60 dark:hover:border-rose-900/60"
+						class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all border border-transparent hover:border-rose-200/60 dark:hover:border-rose-900/60"
 					>Logout</button>
 				</div>
 			{:else}
-				<div class="flex items-center gap-3 border-l border-slate-200/80 dark:border-slate-800 pl-6">
-					<a href="/login" class="px-3.5 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800 transition-all">Log in</a>
+				<div class="flex items-center gap-3 border-l border-slate-200/80 dark:border-zinc-800 pl-6">
+					<a href="/login" class="px-3.5 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-zinc-800 transition-all">Log in</a>
 					<a
 						href="/signup"
 						class="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium rounded-xl shadow-sm shadow-indigo-500/20 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.98] transition-all"

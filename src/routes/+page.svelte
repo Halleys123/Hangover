@@ -116,7 +116,7 @@
 <svelte:window on:pointermove={handlePointerMove} on:pointerup={handlePointerUp} />
 
 <!-- MAIN HOMEPAGE WRAPPER -->
-<div class="min-h-screen flex flex-col bg-white dark:bg-slate-950 transition-colors duration-200">
+<div class="min-h-screen flex flex-col bg-white dark:bg-zinc-950 transition-colors duration-200">
 	<NavBar activeLink="workspace" onAction={startNewProject} />
 
 	<div class="flex-1 flex gap-0 h-[calc(100vh-73px)]">

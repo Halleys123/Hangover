@@ -122,7 +122,7 @@
 	<!-- CONTEXT MENU MODAL OVERLAY -->
 	{#if contextMenu}
 		<div 
-			class="fixed z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 rounded-xl shadow-xl py-1.5 min-w-[160px] transition-colors"
+			class="fixed z-50 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-slate-200/80 dark:border-zinc-800 rounded-xl shadow-xl py-1.5 min-w-[160px] transition-colors"
 			style="left: {contextMenu.x}px; top: {contextMenu.y}px;"
 		>
 			<button 
@@ -138,19 +138,19 @@
 	{/if}
 
 	<!-- ACTION BAR FLOATING OVERLAY -->
-	<div class="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-200 dark:border-slate-800 px-3 py-1.5 flex items-center gap-3 text-sm text-slate-700 dark:text-slate-300 z-10 pointer-events-auto transition-colors">
-		<button title="Zoom Out" class="hover:text-blue-600 dark:hover:text-blue-400 w-8 h-8 flex items-center justify-center font-bold text-xl bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-full transition-colors" onclick={() => zoomOut({duration: 200})}>-</button>
-		<span class="font-bold text-[10px] tracking-widest text-slate-400 dark:text-slate-500">CANVAS</span>
-		<button title="Zoom In" class="hover:text-blue-600 dark:hover:text-blue-400 w-8 h-8 flex items-center justify-center font-bold text-xl bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-full transition-colors" onclick={() => zoomIn({duration: 200})}>+</button>
+	<div class="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-200 dark:border-zinc-800 px-3 py-1.5 flex items-center gap-3 text-sm text-slate-700 dark:text-zinc-300 z-10 pointer-events-auto transition-colors">
+		<button title="Zoom Out" class="hover:text-blue-600 dark:hover:text-blue-400 w-8 h-8 flex items-center justify-center font-bold text-xl bg-slate-50 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-full transition-colors" onclick={() => zoomOut({duration: 200})}>-</button>
+		<span class="font-bold text-[10px] tracking-widest text-slate-400 dark:text-zinc-500">CANVAS</span>
+		<button title="Zoom In" class="hover:text-blue-600 dark:hover:text-blue-400 w-8 h-8 flex items-center justify-center font-bold text-xl bg-slate-50 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-full transition-colors" onclick={() => zoomIn({duration: 200})}>+</button>
 		
-		<div class="w-px h-5 bg-slate-300 dark:bg-slate-700"></div>
+		<div class="w-px h-5 bg-slate-300 dark:bg-zinc-700"></div>
 		
 		<button title="Route & Center View" onclick={() => fitView({duration: 800, padding: 0.2})} class="flex items-center gap-1.5 font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-xs px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-950/50">
 			<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
 			Auto / Center
 		</button>
 		
-		<div class="w-px h-5 bg-slate-300 dark:bg-slate-700"></div>
+		<div class="w-px h-5 bg-slate-300 dark:bg-zinc-700"></div>
 		
 		<button title="Lock / Unlock Items" class="flex items-center gap-1.5 font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-xs px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-950/50 {isCanvasLocked ? 'text-blue-600 dark:text-blue-400 font-semibold' : ''}" onclick={onToggleLock}>
 			<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -163,7 +163,7 @@
 			{isCanvasLocked ? 'Locked' : 'Lock'}
 		</button>
 		
-		<div class="w-px h-5 bg-slate-300 dark:bg-slate-700"></div>
+		<div class="w-px h-5 bg-slate-300 dark:bg-zinc-700"></div>
 		
 		<button title="Toggle Fullscreen" class="flex items-center gap-1.5 font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-xs px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-950/50" onclick={onToggleFullscreen}>
 			<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
