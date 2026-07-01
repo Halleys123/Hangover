@@ -4,6 +4,7 @@
 	import { authUser } from '$lib/stores/auth';
 	import { api } from '$lib/api';
 	import { fade, fly } from 'svelte/transition';
+	import { goto } from '$app/navigation';
 
 	interface Project {
 		_id: string;
@@ -26,11 +27,11 @@
 	let apiError = $state('');
 
 	onMount(async () => {
-		if (!$authUser) { window.location.href = '/login'; return; }
+		if (!$authUser) { goto('/login'); return; }
 		try {
 			projects = await api.get<Project[]>('/projects');
 		} catch (err: any) {
-			if (err.message?.includes('Unauthorized')) { window.location.href = '/login'; return; }
+			if (err.message?.includes('Unauthorized')) { goto('/login'); return; }
 			apiError = err.message;
 		} finally {
 			loading = false;
@@ -60,7 +61,7 @@
 				description: newDescription.trim(),
 				status: newStatus
 			});
-			window.location.href = `/workspace/${project._id}`;
+			goto(`/workspace/${project._id}`);
 		} catch (err: any) {
 			apiError = err.message;
 			creating = false;
@@ -111,7 +112,7 @@
 
 <!-- WORKSPACE PROJECTS LIST PAGE -->
 <div class="min-h-screen flex flex-col bg-[#F8FAFC] dark:bg-zinc-950 transition-colors duration-200">
-	<NavBar activeLink="workspace" showBack={true} onLogoClick={() => (window.location.href = '/')} />
+	<NavBar activeLink="workspace" showBack={true} onLogoClick={() => goto('/')} />
 
 	<div class="flex-1 max-w-5xl mx-auto w-full px-6 py-10">
 		
@@ -183,12 +184,12 @@
 						onclick={(e) => {
 							const target = e.target as HTMLElement;
 							if (!target.closest('button')) {
-								window.location.href = `/workspace/${project._id}`;
+								goto(`/workspace/${project._id}`);
 							}
 						}}
 						onkeydown={(e) => {
 							if (e.key === 'Enter' || e.key === ' ') {
-								window.location.href = `/workspace/${project._id}`;
+								goto(`/workspace/${project._id}`);
 							}
 						}}
 						class="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 rounded-2xl p-6 hover:border-indigo-500/40 dark:hover:border-indigo-500/60 hover:shadow-md hover:shadow-indigo-500/5 transition-all duration-200 text-left group flex flex-col h-full relative overflow-hidden cursor-pointer"

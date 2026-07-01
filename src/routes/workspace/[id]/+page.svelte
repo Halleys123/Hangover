@@ -50,6 +50,7 @@
 
     let workspaceId = $state($page.params.id);
     let projectName = $state('');
+    let projectDatasheets = $state<any[]>([]);
     let projectLoading = $state(true);
     let saveStatus = $state<'idle' | 'saving' | 'saved'>('idle');
     let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -103,7 +104,7 @@
         draggingSide = null;
     }
 
-    import { beforeNavigate } from "$app/navigation";
+    import { beforeNavigate, goto } from "$app/navigation";
 
     let nodes = writable<Node[]>([]);
     let edges = writable<Edge[]>([]);
@@ -126,13 +127,13 @@
 
     function goBack() {
         if (confirmLeave()) {
-            window.location.href = "/workspace";
+            goto("/workspace");
         }
     }
 
     function openDatasheetIngestion() {
         if (confirmLeave()) {
-            window.location.href = "/datasheets";
+            goto("/datasheets");
         }
     }
 
@@ -179,10 +180,11 @@
     let unsubEdges: (() => void) | null = null;
 
     onMount(async () => {
-        if (!$authUser) { window.location.href = '/login'; return; }
+        if (!$authUser) { goto('/login'); return; }
         try {
             const project = await api.get<any>(`/projects/${workspaceId}`);
             projectName = project.name;
+            projectDatasheets = project.datasheets || [];
             nodes.set(project.canvas?.nodes ?? []);
             edges.set(project.canvas?.edges ?? []);
             
@@ -194,10 +196,10 @@
             setTimeout(() => { initialLoadDone = true; }, 600);
         } catch (err: any) {
             if (err.message?.includes('Unauthorized')) { 
-                window.location.href = '/login'; 
+                goto('/login'); 
                 return; 
             }
-            window.location.href = '/workspace';
+            goto('/workspace');
         }
     });
 
@@ -376,7 +378,7 @@
                 class="bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 flex flex-col z-20 shrink-0 min-h-0 text-slate-900 dark:text-white transition-colors"
                 style="width: {rightWidth}px;"
             >
-                <RightLibraryPanel />
+                <RightLibraryPanel {workspaceId} bind:projectDatasheets />
             </div>
         {/if}
     </div>
