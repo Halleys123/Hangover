@@ -103,20 +103,61 @@
         draggingSide = null;
     }
 
+    import { beforeNavigate } from "$app/navigation";
+
     let nodes = writable<Node[]>([]);
     let edges = writable<Edge[]>([]);
+    let hasUnsavedChanges = $state(false);
+
+    beforeNavigate((nav) => {
+        if (hasUnsavedChanges || saveStatus === 'saving') {
+            if (!confirm('You have unsaved changes in your canvas. Are you sure you want to leave without saving?')) {
+                nav.cancel();
+            }
+        }
+    });
+
+    function confirmLeave(): boolean {
+        if (hasUnsavedChanges || saveStatus === 'saving') {
+            return confirm('You have unsaved changes in your canvas. Are you sure you want to leave without saving?');
+        }
+        return true;
+    }
 
     function goBack() {
-        window.location.href = "/workspace";
+        if (confirmLeave()) {
+            window.location.href = "/workspace";
+        }
     }
 
     function openDatasheetIngestion() {
-        window.location.href = "/datasheets";
+        if (confirmLeave()) {
+            window.location.href = "/datasheets";
+        }
+    }
+
+    async function manualSaveCanvas() {
+        if (saveTimer) clearTimeout(saveTimer);
+        saveStatus = 'saving';
+        try {
+            await api.put(`/projects/${workspaceId}/canvas`, {
+                nodes: get(nodes),
+                edges: get(edges)
+            });
+            saveStatus = 'saved';
+            hasUnsavedChanges = false;
+            setTimeout(() => {
+                if (saveStatus === 'saved') saveStatus = 'idle';
+            }, 2000);
+        } catch {
+            saveStatus = 'idle';
+        }
     }
 
     function scheduleCanvasSave() {
         if (saveTimer) clearTimeout(saveTimer);
         saveStatus = 'saving';
+        hasUnsavedChanges = true;
         saveTimer = setTimeout(async () => {
             try {
                 await api.put(`/projects/${workspaceId}/canvas`, {
@@ -124,7 +165,10 @@
                     edges: get(edges)
                 });
                 saveStatus = 'saved';
-                setTimeout(() => (saveStatus = 'idle'), 2000);
+                hasUnsavedChanges = false;
+                setTimeout(() => {
+                    if (saveStatus === 'saved') saveStatus = 'idle';
+                }, 2000);
             } catch {
                 saveStatus = 'idle';
             }
@@ -141,13 +185,19 @@
             projectName = project.name;
             nodes.set(project.canvas?.nodes ?? []);
             edges.set(project.canvas?.edges ?? []);
-        } catch (err: any) {
-            if (err.message?.includes('Unauthorized')) { window.location.href = '/login'; return; }
-        } finally {
+            
             projectLoading = false;
             isLoaded = true;
-            unsubNodes = nodes.subscribe(() => { if (isLoaded) scheduleCanvasSave(); });
-            unsubEdges = edges.subscribe(() => { if (isLoaded) scheduleCanvasSave(); });
+            let initialLoadDone = false;
+            unsubNodes = nodes.subscribe(() => { if (initialLoadDone && isLoaded) scheduleCanvasSave(); });
+            unsubEdges = edges.subscribe(() => { if (initialLoadDone && isLoaded) scheduleCanvasSave(); });
+            setTimeout(() => { initialLoadDone = true; }, 600);
+        } catch (err: any) {
+            if (err.message?.includes('Unauthorized')) { 
+                window.location.href = '/login'; 
+                return; 
+            }
+            window.location.href = '/workspace';
         }
     });
 
@@ -172,22 +222,24 @@
     }
 
     function handleDropData(data: any, position: { x: number; y: number }) {
+        const defaultLeft = [
+            { id: "1", label: "PIN1", color: "gray" },
+            { id: "2", label: "PIN2", color: "gray" },
+        ];
+        const defaultRight = [
+            { id: "3", label: "PIN3", color: "gray" },
+            { id: "4", label: "PIN4", color: "gray" },
+        ];
         const newNode = {
             id: Math.random().toString(),
-            type: data.type,
+            type: data.type || 'hardware',
             position,
             data: {
-                label: data.name,
+                label: data.name || 'Component',
                 theme: data.diagram?.theme || "blue",
-                pins: data.diagram?.pins || {
-                    left: [
-                        { id: "1", label: "PIN1", color: "gray" },
-                        { id: "2", label: "PIN2", color: "gray" },
-                    ],
-                    right: [
-                        { id: "3", label: "PIN3", color: "gray" },
-                        { id: "4", label: "PIN4", color: "gray" },
-                    ],
+                pins: {
+                    left: Array.isArray(data.diagram?.pins?.left) ? data.diagram.pins.left : defaultLeft,
+                    right: Array.isArray(data.diagram?.pins?.right) ? data.diagram.pins.right : defaultRight,
                 },
             },
         };
@@ -201,30 +253,38 @@
             event.dataTransfer.dropEffect = "move";
         }
     }
+
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+        if (hasUnsavedChanges || saveStatus === 'saving') {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    }
 </script>
 
 <svelte:window
     on:pointermove={handlePointerMove}
     on:pointerup={handlePointerUp}
+    onbeforeunload={handleBeforeUnload}
 />
 
-<div
-    class="h-screen flex flex-col bg-white overflow-hidden text-gray-900 font-sans"
->
+<!-- MAIN WORKSPACE CANVAS PAGE -->
+<div class="h-screen flex flex-col bg-white dark:bg-slate-950 overflow-hidden text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200">
     {#if !isFullscreen}
         <NavBar
             activeLink="workspace"
             onLogoClick={goBack}
-            actionLabel={saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : 'Export'}
+            actionLabel={saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved ✓' : 'Save Project'}
+            onAction={manualSaveCanvas}
             wide
             compact
         />
     {/if}
 
-    <div class="flex-1 flex w-full">
+    <div class="flex-1 flex w-full min-h-0">
         {#if leftCollapsed}
             <button
-                on:click={() => (leftCollapsed = false)}
+                onclick={() => (leftCollapsed = false)}
                 class="w-6 shrink-0 flex items-center justify-center border-r border-gray-200 bg-white hover:bg-gray-50 group"
                 title="Show AI Copilot panel"
             >
@@ -244,14 +304,14 @@
             </button>
         {:else}
             <div
-                class="flex flex-col border-r border-gray-200 bg-[#FAFAFA] shrink-0"
+                class="flex flex-col border-r border-slate-200 dark:border-slate-800 bg-[#FAFAFA] dark:bg-slate-900 shrink-0 min-h-0 transition-colors"
                 style="width: {leftWidth}px;"
             >
                 <div
-                    class="px-4 py-3 border-b border-gray-200 flex items-center gap-2 bg-white"
+                    class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white transition-colors"
                 >
                     <svg
-                        class="w-5 h-5 text-blue-600"
+                        class="w-5 h-5 text-blue-600 dark:text-blue-400"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                     >
@@ -264,13 +324,13 @@
                 <AIChatPanel bind:isPopoverOpen />
             </div>
             <div
-                class="w-1 shrink-0 cursor-col-resize bg-gray-200 hover:bg-blue-400 active:bg-blue-500 transition-colors"
-                on:pointerdown={() => startDrag("left")}
+                class="w-1 shrink-0 cursor-col-resize bg-slate-200 dark:bg-slate-800 hover:bg-blue-400 active:bg-blue-500 transition-colors"
+                onpointerdown={() => startDrag("left")}
             ></div>
         {/if}
 
         <div
-            class="flex-1 bg-[#FAFAFA] relative overflow-hidden flex flex-col z-0"
+            class="flex-1 bg-[#FAFAFA] dark:bg-slate-950 relative overflow-hidden flex flex-col z-0 transition-colors"
         >
             <SvelteFlowProvider>
                 <CanvasInner
@@ -289,12 +349,12 @@
 
         {#if rightCollapsed}
             <button
-                on:click={() => (rightCollapsed = false)}
-                class="w-6 shrink-0 flex items-center justify-center border-l border-gray-200 bg-white hover:bg-gray-50 group"
+                onclick={() => (rightCollapsed = false)}
+                class="w-6 shrink-0 flex items-center justify-center border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 group transition-colors"
                 title="Show Components panel"
             >
                 <svg
-                    class="w-4 h-4 text-gray-400 group-hover:text-blue-600"
+                    class="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-blue-600 dark:group-hover:text-blue-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -309,11 +369,11 @@
             </button>
         {:else}
             <div
-                class="w-1 shrink-0 cursor-col-resize bg-gray-200 hover:bg-blue-400 active:bg-blue-500 transition-colors"
-                on:pointerdown={() => startDrag("right")}
+                class="w-1 shrink-0 cursor-col-resize bg-slate-200 dark:bg-slate-800 hover:bg-blue-400 active:bg-blue-500 transition-colors"
+                onpointerdown={() => startDrag("right")}
             ></div>
             <div
-                class="bg-white border-l border-gray-200 flex flex-col z-20 shrink-0"
+                class="bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col z-20 shrink-0 min-h-0 text-slate-900 dark:text-white transition-colors"
                 style="width: {rightWidth}px;"
             >
                 <RightLibraryPanel />

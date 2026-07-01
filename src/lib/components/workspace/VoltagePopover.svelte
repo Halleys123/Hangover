@@ -11,7 +11,7 @@
 			</div>
 			<h3 class="text-lg font-bold text-gray-900">Voltage Mismatch Detected</h3>
 		</div>
-		<button on:click={() => isOpen = false} class="text-gray-400 hover:text-gray-600">
+		<button onclick={() => isOpen = false} class="text-gray-400 hover:text-gray-600">
 			<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
 		</button>
 	</div>
@@ -24,8 +24,8 @@
 		<p class="text-slate-700 font-medium">An AI auto-fix is available to safely bridge this connection.</p>
 	</div>
 	<div class="flex gap-3 justify-end mt-4">
-		<button on:click={() => isOpen = false} class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium text-sm transition flex-1">Cancel Connection</button>
-		<button on:click={() => isOpen = false} class="px-4 py-2 bg-[#0F172A] text-white rounded-lg hover:bg-[#1E293B] font-medium text-sm transition flex-[1.5]">Insert Logic Level Converter</button>
+		<button onclick={() => isOpen = false} class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium text-sm transition flex-1">Cancel Connection</button>
+		<button onclick={() => isOpen = false} class="px-4 py-2 bg-[#0F172A] text-white rounded-lg hover:bg-[#1E293B] font-medium text-sm transition flex-[1.5]">Insert Logic Level Converter</button>
 	</div>
 </div>
 <div class="absolute inset-0 bg-gray-500/20 z-40 backdrop-blur-[1px]"></div>

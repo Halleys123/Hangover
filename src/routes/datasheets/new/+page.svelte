@@ -42,7 +42,7 @@
 	<!-- Header -->
 	<header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-sm">
 		<div class="flex items-center gap-4">
-			<button on:click={goBack} class="p-2 -ml-2 text-gray-400 hover:text-gray-900 transition-colors rounded-full hover:bg-gray-50">
+			<button onclick={goBack} class="p-2 -ml-2 text-gray-400 hover:text-gray-900 transition-colors rounded-full hover:bg-gray-50">
 				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
 			</button>
 			<div>
@@ -52,7 +52,7 @@
 		</div>
 		{#if hasFile}
 			<button 
-				on:click={handleRescan}
+				onclick={handleRescan}
 				disabled={isScanning}
 				class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 shadow-sm rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all disabled:opacity-50"
 			>
@@ -90,7 +90,7 @@
 							</div>
 						{:else}
 							<button 
-								on:click={simulateUpload}
+								onclick={simulateUpload}
 								class="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition shadow-sm"
 							>
 								Select File
@@ -162,7 +162,7 @@
 					<div class="h-full flex flex-col items-center justify-center text-center p-8">
 						<p class="text-gray-600 mb-6 text-sm">Document loaded. Ready to extract pinout map and specifications into the knowledge graph.</p>
 						<button 
-							on:click={handleParse}
+							onclick={handleParse}
 							disabled={isScanning}
 							class="px-8 py-3 bg-[#0F172A] text-white font-medium rounded-lg hover:bg-[#1E293B] transition shadow-md flex items-center gap-3 disabled:opacity-75"
 						>

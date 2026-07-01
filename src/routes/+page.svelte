@@ -81,7 +81,8 @@
 		showNewForm = true;
 	}
 
-	async function createProject() {
+	async function createProject(e: SubmitEvent) {
+		e.preventDefault();
 		if (!newProjectName.trim()) return;
 		creating = true;
 		try {
@@ -93,18 +94,36 @@
 	function openProject(id: string) {
 		window.location.href = `/workspace/${id}`;
 	}
+
+	function handleSendMessage(e: SubmitEvent) {
+		e.preventDefault();
+		if (!inputValue.trim()) return;
+		const text = inputValue.trim();
+		messages = [...messages, { role: 'user', text }];
+		inputValue = '';
+		setTimeout(() => {
+			messages = [
+				...messages,
+				{
+					role: 'assistant',
+					text: `Great idea! You can create a project for "${text}" using the "+ New Project" button above or switch to your workspace to start designing schematics.`
+				}
+			];
+		}, 500);
+	}
 </script>
 
 <svelte:window on:pointermove={handlePointerMove} on:pointerup={handlePointerUp} />
 
-<div class="min-h-screen flex flex-col bg-white">
+<!-- MAIN HOMEPAGE WRAPPER -->
+<div class="min-h-screen flex flex-col bg-white dark:bg-slate-950 transition-colors duration-200">
 	<NavBar activeLink="workspace" onAction={startNewProject} />
 
 	<div class="flex-1 flex gap-0 h-[calc(100vh-73px)]">
 		<!-- Left: AI Chat Interface -->
 		{#if leftCollapsed}
 			<button
-				on:click={() => (leftCollapsed = false)}
+				onclick={() => (leftCollapsed = false)}
 				class="w-6 shrink-0 flex items-center justify-center border-r border-gray-200 bg-white hover:bg-gray-50 group"
 				title="Show AI Copilot panel"
 			>
@@ -153,7 +172,7 @@
 
 			<!-- Input Area -->
 			<div class="p-4 bg-white border-t border-gray-200">
-				<form on:submit|preventDefault={handleSendMessage} class="relative">
+				<form onsubmit={handleSendMessage} class="relative">
 					<input
 						type="text"
 						bind:value={inputValue}
@@ -174,7 +193,7 @@
 		<!-- Left Divider -->
 		<div
 			class="w-1 shrink-0 cursor-col-resize bg-gray-200 hover:bg-blue-400 active:bg-blue-500 transition-colors"
-			on:pointerdown={startDrag}
+			onpointerdown={startDrag}
 		></div>
 		{/if}
 
@@ -182,23 +201,20 @@
 		<div class="flex-1 bg-gray-50 p-8 overflow-y-auto w-full">
 			<div class="max-w-4xl mx-auto">
 				<div class="flex justify-between items-center mb-8">
-					<h2 class="text-2xl font-bold text-gray-900">Recent Projects</h2>
+					<div>
+						<h2 class="text-2xl font-bold tracking-tight text-slate-900">Recent Projects</h2>
+						<p class="text-slate-500 text-sm mt-1">Pick up where you left off or start a new hardware workspace.</p>
+					</div>
 					<button
-						on:click={startNewProject}
-						class="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition"
+						onclick={() => (window.location.href = '/workspace')}
+						class="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium rounded-xl shadow-sm shadow-indigo-500/20 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.98] transition-all flex items-center gap-2"
 					>
-						+ New Project
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+						</svg>
+						New Project
 					</button>
 				</div>
-
-				{#if showNewForm}
-				<form onsubmit|preventDefault={createProject} class="mb-4 flex gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-					<input type="text" bind:value={newProjectName} placeholder="Project name" autofocus
-						class="flex-1 px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
-					<button type="submit" disabled={creating || !newProjectName.trim()} class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50">{creating ? '…' : 'Create'}</button>
-					<button type="button" on:click={() => { showNewForm = false; newProjectName = ''; }} class="px-3 py-1.5 text-gray-500 text-sm rounded hover:bg-gray-100">✕</button>
-				</form>
-				{/if}
 				
 				<div class="mb-6 relative">
 					<svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -220,7 +236,7 @@
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					{#each filteredProjects as project (project._id)}
 						<button
-							on:click={() => openProject(project._id)}
+							onclick={() => openProject(project._id)}
 							class="bg-white border border-gray-200 rounded-lg p-5 hover:border-blue-400 hover:shadow-md transition-all text-left group flex flex-col h-full"
 						>
 							<div class="flex items-start justify-between mb-2">
@@ -260,10 +276,10 @@
 					<div class="text-center py-16 bg-white rounded-lg border border-gray-200 mt-4">
 						{#if projects.length === 0}
 							<p class="text-gray-500 mb-2 font-medium">No projects yet</p>
-							<button on:click={startNewProject} class="text-blue-600 text-sm font-medium hover:underline">Create your first project</button>
+							<button onclick={startNewProject} class="text-blue-600 text-sm font-medium hover:underline">Create your first project</button>
 						{:else}
 							<p class="text-gray-500 font-medium">No projects match '{searchQuery}'</p>
-							<button on:click={() => searchQuery = ''} class="mt-2 text-blue-600 text-sm font-medium hover:underline">Clear search</button>
+							<button onclick={() => searchQuery = ''} class="mt-2 text-blue-600 text-sm font-medium hover:underline">Clear search</button>
 						{/if}
 					</div>
 				{/if}

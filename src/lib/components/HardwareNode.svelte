@@ -62,7 +62,7 @@
 
 		<!-- Left Pins -->
 		<div class="flex flex-col gap-4 relative z-10 w-full">
-			{#each data.pins.left as pin, i}
+			{#each data?.pins?.left ?? [] as pin, i}
 				<div class="flex items-center justify-start relative w-full h-4">
 					<Handle 
 						type="target" 
@@ -79,7 +79,7 @@
 
 		<!-- Right Pins -->
 		<div class="flex flex-col gap-4 relative z-10 w-full text-right mt-auto">
-			{#each data.pins.right as pin, i}
+			{#each data?.pins?.right ?? [] as pin, i}
 				<div class="flex items-center justify-end relative w-full h-4">
 					<span class="text-[9px] text-slate-400 mr-1 font-bold">{pin.label}</span>
 					<Handle 

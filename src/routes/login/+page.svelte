@@ -24,32 +24,35 @@
 			loading = false;
 		}
 	}
+	import NavBar from '$lib/components/NavBar.svelte';
 </script>
 
-<div class="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-	<div class="w-full max-w-sm">
-		<div class="flex items-center gap-3 justify-center mb-8">
-			<div class="w-8 h-8 flex items-center justify-center text-blue-600">
-				<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-					<path d="M12 2L2 7l10 5 10-5-10-5zm0 10L2 17l10 5 10-5-10-5z" />
-				</svg>
-			</div>
-			<span class="text-xl font-bold text-gray-900">Hardware Prototyping Copilot</span>
+<!-- LOGIN PAGE CONTAINER -->
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100/50 to-indigo-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/20 flex flex-col justify-between transition-colors duration-200">
+	<NavBar showBack={true} onLogoClick={() => (window.location.href = '/')} />
+
+	<div class="flex-1 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+		<div class="sm:mx-auto sm:w-full sm:max-w-md">
+			<h2 class="mt-2 text-center text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Welcome back</h2>
+			<p class="mt-1 text-center text-sm text-slate-500 dark:text-slate-400">
+				Or <a href="/signup" class="font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 transition-colors">create a free account</a>
+			</p>
 		</div>
 
-		<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-			<h1 class="text-2xl font-bold text-gray-900 mb-1">Welcome back</h1>
-			<p class="text-gray-500 text-sm mb-6">Sign in to your account to continue.</p>
-
+	<div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4">
+		<div class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl py-8 px-6 shadow-xl shadow-slate-200/60 dark:shadow-none rounded-2xl border border-slate-200/80 dark:border-slate-800 sm:px-10 transition-colors duration-200">
 			{#if error}
-				<div class="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-					{error}
+				<div class="mb-6 p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-xl text-sm text-rose-700 dark:text-rose-300 flex items-center gap-3">
+					<svg class="w-5 h-5 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+					</svg>
+					<span>{error}</span>
 				</div>
 			{/if}
 
-			<form onsubmit={handleLogin} class="space-y-4">
+			<form onsubmit={handleLogin} class="space-y-5">
 				<div>
-					<label class="block text-sm font-medium text-gray-700 mb-1" for="email">Email</label>
+					<label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5" for="email">Email address</label>
 					<input
 						id="email"
 						type="email"
@@ -57,14 +60,12 @@
 						required
 						autocomplete="email"
 						placeholder="you@example.com"
-						class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+						class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
 					/>
 				</div>
 
 				<div>
-					<label class="block text-sm font-medium text-gray-700 mb-1" for="password"
-						>Password</label
-					>
+					<label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5" for="password">Password</label>
 					<input
 						id="password"
 						type="password"
@@ -72,28 +73,41 @@
 						required
 						autocomplete="current-password"
 						placeholder="••••••••"
-						class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+						class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
 					/>
 				</div>
 
-				<button
-					type="submit"
-					disabled={loading}
-					class="w-full py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-				>
-					{loading ? 'Signing in…' : 'Sign In'}
-				</button>
+				<div class="pt-2">
+					<button
+						type="submit"
+						disabled={loading}
+						class="w-full py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.99] text-white font-medium rounded-xl shadow-sm shadow-indigo-500/20 transition-all duration-150 flex justify-center items-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
+					>
+						{#if loading}
+							<svg class="w-4 h-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+								<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+								<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+							</svg>
+							<span>Signing in…</span>
+						{:else}
+							<span>Sign In</span>
+						{/if}
+					</button>
+				</div>
 			</form>
 
-			<p class="mt-5 text-center text-sm text-gray-500">
-				Don't have an account?
-				<a href="/signup" class="text-blue-600 font-medium hover:underline">Sign up</a>
-			</p>
-
-			<div class="mt-4 pt-4 border-t border-gray-100 text-center">
-				<p class="text-xs text-gray-400">Demo account</p>
-				<p class="text-xs text-gray-500 font-mono mt-0.5">demo@hangover.dev / demo1234</p>
+			<div class="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800 text-center">
+				<p class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Demo Account Access</p>
+				<button
+					type="button"
+					onclick={() => { email = 'demo@hangover.dev'; password = 'demo1234'; }}
+					class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+				>
+					<span>demo@hangover.dev / demo1234</span>
+					<span class="text-[10px] bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded font-sans font-medium">Click to fill</span>
+				</button>
 			</div>
 		</div>
+	</div>
 	</div>
 </div>

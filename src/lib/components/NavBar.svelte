@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { authUser } from '$lib/stores/auth';
+	import { onMount } from 'svelte';
 
 	interface Props {
 		activeLink?: 'workspace' | 'datasheets';
@@ -8,6 +9,8 @@
 		onAction?: () => void;
 		wide?: boolean;
 		compact?: boolean;
+		showBack?: boolean;
+		onBackClick?: () => void;
 	}
 
 	let {
@@ -16,8 +19,35 @@
 		actionLabel,
 		onAction,
 		wide = false,
-		compact = false
+		compact = false,
+		showBack = false,
+		onBackClick
 	}: Props = $props();
+
+	let isDark = $state(false);
+
+	onMount(() => {
+		isDark = document.documentElement.classList.contains('dark');
+	});
+
+	function toggleTheme() {
+		isDark = !isDark;
+		if (isDark) {
+			document.documentElement.classList.add('dark');
+			localStorage.setItem('theme', 'dark');
+		} else {
+			document.documentElement.classList.remove('dark');
+			localStorage.setItem('theme', 'light');
+		}
+	}
+
+	function handleBack() {
+		if (onBackClick) {
+			onBackClick();
+		} else {
+			window.history.back();
+		}
+	}
 
 	function logout() {
 		authUser.logout();
@@ -25,54 +55,99 @@
 	}
 </script>
 
-<nav class="bg-white border-b border-gray-200">
-	<div class="{wide ? 'w-full' : 'max-w-7xl mx-auto'} px-6 {compact ? 'py-3' : 'py-4'} flex items-center justify-between">
-		<div
-			class="flex items-center gap-3 {onLogoClick ? 'cursor-pointer' : ''}"
-			onclick={onLogoClick}
-		>
-			<div class="w-8 h-8 flex items-center justify-center text-blue-600">
-				<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-					<path d="M12 2L2 7l10 5 10-5-10-5zm0 10L2 17l10 5 10-5-10-5z" fill="currentColor"/>
-				</svg>
+<!-- TOP NAVIGATION BAR COMPONENT -->
+<nav class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-40 transition-colors duration-200">
+	<div class="{wide ? 'w-full' : 'max-w-7xl mx-auto'} px-6 {compact ? 'py-3' : 'py-3.5'} flex items-center justify-between">
+		
+		<!-- BRAND LOGO & OPTIONAL BACK BUTTON -->
+		<div class="flex items-center gap-4">
+			{#if showBack}
+				<button
+					onclick={handleBack}
+					title="Go Back"
+					class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all border border-slate-200/60 dark:border-slate-700"
+				>
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+					Back
+				</button>
+			{/if}
+
+			<div
+				class="flex items-center gap-3 {onLogoClick ? 'cursor-pointer group' : ''}"
+				onclick={onLogoClick}
+			>
+				<div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-sm shadow-indigo-500/20 group-hover:scale-105 transition-transform duration-200">
+					<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+						<path d="M12 2L2 7l10 5 10-5-10-5zm0 10L2 17l10 5 10-5-10-5z" fill="currentColor"/>
+					</svg>
+				</div>
+				<h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Hardware Prototyping Copilot</h1>
 			</div>
-			<h1 class="text-xl font-bold text-gray-900">Hardware Prototyping Copilot</h1>
 		</div>
+
+		<!-- NAVIGATION LINKS & ACTIONS -->
 		<div class="flex items-center gap-6">
 			<a
 				href="/workspace"
 				class={activeLink === 'workspace'
-					? `text-blue-600 font-medium border-b-2 border-blue-600 ${compact ? 'pb-4 -mb-4' : 'pb-5 -mb-5'}`
-					: 'text-gray-500 font-medium hover:text-gray-900'}
+					? `text-indigo-600 dark:text-indigo-400 font-semibold border-b-2 border-indigo-600 dark:border-indigo-400 ${compact ? 'pb-3.5 -mb-3.5' : 'pb-4 -mb-4'}`
+					: 'text-slate-500 dark:text-slate-400 font-medium hover:text-slate-900 dark:hover:text-white transition-colors'}
 			>Workspace</a>
 			<a
 				href="/datasheets"
 				class={activeLink === 'datasheets'
-					? `text-blue-600 font-medium border-b-2 border-blue-600 ${compact ? 'pb-4 -mb-4' : 'pb-5 -mb-5'}`
-					: 'text-gray-500 font-medium hover:text-gray-900'}
+					? `text-indigo-600 dark:text-indigo-400 font-semibold border-b-2 border-indigo-600 dark:border-indigo-400 ${compact ? 'pb-3.5 -mb-3.5' : 'pb-4 -mb-4'}`
+					: 'text-slate-500 dark:text-slate-400 font-medium hover:text-slate-900 dark:hover:text-white transition-colors'}
 			>Datasheets</a>
+
 			{#if actionLabel}
 				<button
 					onclick={onAction}
-					class="px-4 py-2 bg-blue-600 text-white font-medium rounded hover:bg-blue-700 transition-colors"
+					class="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium rounded-xl shadow-sm shadow-indigo-500/20 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.98] transition-all"
 				>
 					{actionLabel}
 				</button>
 			{/if}
+
+			<!-- THEME TOGGLE BUTTON -->
+			<button
+				onclick={toggleTheme}
+				title="Toggle Dark Mode"
+				class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+			>
+				{#if isDark}
+					<!-- Sun Icon for Dark Mode -->
+					<svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+					</svg>
+				{:else}
+					<!-- Moon Icon for Light Mode -->
+					<svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+					</svg>
+				{/if}
+			</button>
+
+			<!-- USER PROFILE SECTION -->
 			{#if $authUser}
-				<div class="flex items-center gap-3 border-l border-gray-200 pl-6">
-					<span class="text-sm text-gray-700 font-medium">{$authUser.name}</span>
+				<div class="flex items-center gap-3 border-l border-slate-200/80 dark:border-slate-800 pl-6">
+					<div class="flex items-center gap-2">
+						<div class="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-xs font-semibold text-slate-700 dark:text-slate-300">
+							{$authUser.name ? $authUser.name[0].toUpperCase() : 'U'}
+						</div>
+						<span class="text-sm text-slate-700 dark:text-slate-300 font-medium">{$authUser.name}</span>
+					</div>
 					<button
 						onclick={logout}
-						class="text-sm text-gray-500 hover:text-gray-900 font-medium"
+						class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all border border-transparent hover:border-rose-200/60 dark:hover:border-rose-900/60"
 					>Logout</button>
 				</div>
 			{:else}
-				<div class="flex items-center gap-3 border-l border-gray-200 pl-6">
-					<a href="/login" class="text-sm text-gray-600 font-medium hover:text-gray-900">Log in</a>
+				<div class="flex items-center gap-3 border-l border-slate-200/80 dark:border-slate-800 pl-6">
+					<a href="/login" class="px-3.5 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800 transition-all">Log in</a>
 					<a
 						href="/signup"
-						class="px-3.5 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors"
+						class="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium rounded-xl shadow-sm shadow-indigo-500/20 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.98] transition-all"
 					>Sign up</a>
 				</div>
 			{/if}

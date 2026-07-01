@@ -85,12 +85,13 @@
 	}
 </script>
 
-<div class="h-screen flex flex-col bg-gray-50 overflow-hidden">
-	<NavBar activeLink="datasheets" onLogoClick={() => (window.location.href = '/')} />
+<!-- DATASHEET INGESTION & LIBRARY PAGE -->
+<div class="h-screen flex flex-col bg-slate-50 dark:bg-slate-950 transition-colors duration-200 overflow-hidden">
+	<NavBar activeLink="datasheets" showBack={true} onLogoClick={() => (window.location.href = '/')} />
 
 	<div class="flex-1 flex overflow-hidden">
 		<!-- Left: PDF Viewer -->
-		<div class="flex-1 flex flex-col bg-white border-r border-gray-200 overflow-hidden">
+		<div class="flex-1 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 overflow-hidden">
 			{#if loadingPdf}
 				<div class="flex-1 flex items-center justify-center">
 					<div class="flex flex-col items-center gap-3 text-gray-400">
@@ -200,77 +201,4 @@
 <style>
 	:global(body) { overflow: hidden; }
 </style>
-
-
-<div class="min-h-screen flex flex-col bg-gray-50">
-	<NavBar activeLink="datasheets" onLogoClick={goHome} />
-
-	<div class="flex-1 max-w-5xl mx-auto w-full px-6 py-10">
-		<div class="flex justify-between items-center mb-8">
-			<div>
-				<h2 class="text-2xl font-bold text-gray-900">Datasheet Library</h2>
-				<p class="text-gray-500 text-sm mt-1">Manage documents that AI relies on for extracting pinouts and schematic rules.</p>
-			</div>
-			<button
-				onclick={startUpload}
-				class="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition"
-			>
-				Upload PDF Datasheet
-			</button>
-		</div>
-
-		<div class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-			<table class="w-full text-left border-collapse">
-				<thead>
-					<tr class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200">
-						<th class="px-6 py-4">Document Name</th>
-						<th class="px-6 py-4">Status</th>
-						<th class="px-6 py-4">Size</th>
-						<th class="px-6 py-4">Uploaded</th>
-						<th class="px-6 py-4 text-right">Actions</th>
-					</tr>
-				</thead>
-				<tbody class="divide-y text-sm">
-					{#each datasheets as doc (doc.id)}
-					<tr class="hover:bg-gray-50 transition-colors">
-						<td class="px-6 py-4 font-medium text-gray-900 flex items-center gap-3">
-							<svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24">
-								<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 2l5 5h-5V4zM8 14h8v2H8v-2zm0-4h8v2H8v-2z" />
-							</svg>
-							{doc.name}
-						</td>
-						<td class="px-6 py-4">
-							{#if doc.parsed}
-							<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-green-50 text-green-700 text-xs font-semibold tracking-wide border border-green-200">
-								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-								Parsed
-							</span>
-							{:else}
-							<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-yellow-50 text-yellow-700 text-xs font-semibold tracking-wide border border-yellow-200">
-								Processing...
-							</span>
-							{/if}
-						</td>
-						<td class="px-6 py-4 text-gray-500">{doc.size}</td>
-						<td class="px-6 py-4 text-gray-500">{doc.uploadedAt}</td>
-						<td class="px-6 py-4 text-right">
-							<button class="text-gray-400 hover:text-blue-600 transition-colors">
-								<svg class="w-5 h-5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
-							</button>
-						</td>
-					</tr>
-					{/each}
-					
-					{#if datasheets.length === 0}
-					<tr>
-						<td colspan="5" class="px-6 py-16 text-center text-gray-500">
-							<p>No datasheets uploaded yet.</p>
-							<a href="/datasheets/new" class="text-blue-600 font-medium hover:underline mt-2 inline-block">Upload one now</a>
-						</td>
-					</tr>
-					{/if}
-				</tbody>
-			</table>
-		</div>
-	</div>
-</div>
+
