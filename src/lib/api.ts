@@ -5,7 +5,7 @@ const BASE = 'http://localhost:3000/api';
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
-    ...(init.headers as Record<string, string>)
+    ...(init.headers as Record<string, string>),
   };
 
   if (!(init.body instanceof FormData)) {
@@ -31,5 +31,5 @@ export const api = {
     request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
   upload: <T>(path: string, form: FormData) =>
-    request<T>(path, { method: 'POST', body: form })
+    request<T>(path, { method: 'POST', body: form }),
 };

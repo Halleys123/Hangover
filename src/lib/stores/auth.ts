@@ -8,7 +8,9 @@ export interface AuthUser {
 }
 
 const stored = browser ? localStorage.getItem('auth_user') : null;
-const initial: AuthUser | null = stored ? (JSON.parse(stored) as AuthUser) : null;
+const initial: AuthUser | null = stored
+  ? (JSON.parse(stored) as AuthUser)
+  : null;
 
 const { subscribe, set } = writable<AuthUser | null>(initial);
 
@@ -27,7 +29,7 @@ export const authUser = {
       localStorage.removeItem('auth_user');
     }
     set(null);
-  }
+  },
 };
 
 export function getToken(): string | null {

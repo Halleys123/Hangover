@@ -1,32 +1,23 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import NavBar from '$lib/components/NavBar.svelte';
+	import { authUser } from '$lib/stores/auth';
+	import { api } from '$lib/api';
 
-	let projects = $state([
-		{
-			id: 1,
-			name: '3D Printer Build',
-			description: 'Custom FDM printer with RAMPS 1.4 and TMC2209 drivers',
-			components: ['RAMPS 1.4', 'TMC2209', 'NEMA 17'],
-			date: '2024-12-15',
-			status: 'in-progress'
-		},
-		{
-			id: 2,
-			name: 'Smart Plant Monitor',
-			description: 'IoT moisture sensor with ESP32 and capacitive soil sensor',
-			components: ['ESP32', 'Capacitive Soil Sensor', 'MCP3008'],
-			date: '2024-12-10',
-			status: 'completed'
-		},
-		{
-			id: 3,
-			name: 'Weather Station',
-			description: 'Arduino-based weather monitoring system',
-			components: ['Arduino Uno', 'DHT22', 'BMP280'],
-			date: '2024-12-05',
-			status: 'in-progress'
-		}
-	]);
+	interface Project {
+		_id: string;
+		name: string;
+		description: string;
+		components: string[];
+		date: string;
+		status: 'in-progress' | 'completed';
+	}
+
+	let projects = $state<Project[]>([]);
+	let projectsLoading = $state(true);
+	let creating = $state(false);
+	let showNewForm = $state(false);
+	let newProjectName = $state('');
 
 	let messages = $state<Array<{ role: 'user' | 'assistant'; text: string }>>([
 		{
@@ -75,30 +66,31 @@
 		)
 	);
 
-	function handleSendMessage() {
-		if (inputValue.trim()) {
-			messages.push({
-				role: 'user',
-				text: inputValue
-			});
-			inputValue = '';
-
-			// Simulate copilot response
-			setTimeout(() => {
-				messages.push({
-					role: 'assistant',
-					text: 'That sounds interesting! To help you, I\'ll need the datasheets for your components. You can upload them in the workspace view where we can validate connections in real-time.'
-				});
-			}, 600);
+	onMount(async () => {
+		if (!$authUser) { window.location.href = '/login'; return; }
+		try {
+			projects = await api.get<Project[]>('/projects');
+		} catch (err: any) {
+			if (err.message?.includes('Unauthorized')) { window.location.href = '/login'; return; }
+		} finally {
+			projectsLoading = false;
 		}
+	});
+
+	async function startNewProject() {
+		showNewForm = true;
 	}
 
-	function startNewProject() {
-		// New path logic: when creating a project, jump directly to standard workspace ID to avoid /new matching conflicts
-		window.location.href = '/workspace/demo-project';
+	async function createProject() {
+		if (!newProjectName.trim()) return;
+		creating = true;
+		try {
+			const project = await api.post<{ _id: string }>('/projects', { name: newProjectName.trim() });
+			window.location.href = `/workspace/${project._id}`;
+		} catch { creating = false; }
 	}
 
-	function openProject(id: number) {
+	function openProject(id: string) {
 		window.location.href = `/workspace/${id}`;
 	}
 </script>
@@ -106,29 +98,7 @@
 <svelte:window on:pointermove={handlePointerMove} on:pointerup={handlePointerUp} />
 
 <div class="min-h-screen flex flex-col bg-white">
-	<!-- Top Navigation -->
-	<nav class="bg-white border-b border-gray-200">
-		<div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-			<div class="flex items-center gap-3">
-				<div class="w-8 h-8 flex items-center justify-center text-blue-600">
-					<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-						<path d="M12 2L2 7l10 5 10-5-10-5zm0 10L2 17l10 5 10-5-10-5z" fill="currentColor"/>
-					</svg>
-				</div>
-				<h1 class="text-xl font-bold text-gray-900">Hardware Prototyping Copilot</h1>
-			</div>
-			<div class="flex items-center gap-6">
-				<a href="/workspace" class="text-blue-600 font-medium border-b-2 border-blue-600 pb-5 -mb-5">Workspace</a>
-				<a href="/datasheets" class="text-gray-500 font-medium hover:text-gray-900">Datasheets</a>
-				<button
-					on:click={startNewProject}
-					class="px-4 py-2 bg-blue-600 text-white font-medium rounded hover:bg-blue-700 transition-colors"
-				>
-					Export
-				</button>
-			</div>
-		</div>
-	</nav>
+	<NavBar activeLink="workspace" onAction={startNewProject} />
 
 	<div class="flex-1 flex gap-0 h-[calc(100vh-73px)]">
 		<!-- Left: AI Chat Interface -->
@@ -220,6 +190,15 @@
 						+ New Project
 					</button>
 				</div>
+
+				{#if showNewForm}
+				<form onsubmit|preventDefault={createProject} class="mb-4 flex gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+					<input type="text" bind:value={newProjectName} placeholder="Project name" autofocus
+						class="flex-1 px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+					<button type="submit" disabled={creating || !newProjectName.trim()} class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50">{creating ? '…' : 'Create'}</button>
+					<button type="button" on:click={() => { showNewForm = false; newProjectName = ''; }} class="px-3 py-1.5 text-gray-500 text-sm rounded hover:bg-gray-100">✕</button>
+				</form>
+				{/if}
 				
 				<div class="mb-6 relative">
 					<svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -233,10 +212,15 @@
 					/>
 				</div>
 				
+				{#if projectsLoading}
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-					{#each filteredProjects as project (project.id)}
+					{#each [1,2,3] as i (i)}<div class="border border-gray-200 rounded-lg p-5 animate-pulse"><div class="h-5 bg-gray-200 rounded w-3/4 mb-3"></div><div class="h-3 bg-gray-100 rounded w-full mb-2"></div><div class="h-3 bg-gray-100 rounded w-2/3"></div></div>{/each}
+				</div>
+				{:else}
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					{#each filteredProjects as project (project._id)}
 						<button
-							on:click={() => openProject(project.id)}
+							on:click={() => openProject(project._id)}
 							class="bg-white border border-gray-200 rounded-lg p-5 hover:border-blue-400 hover:shadow-md transition-all text-left group flex flex-col h-full"
 						>
 							<div class="flex items-start justify-between mb-2">
@@ -272,21 +256,17 @@
 					{/each}
 				</div>
 
-				{#if filteredProjects.length === 0}
+				{#if filteredProjects.length === 0 && !projectsLoading}
 					<div class="text-center py-16 bg-white rounded-lg border border-gray-200 mt-4">
-						<svg class="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-						</svg>
-						<p class="text-gray-500 mb-4 font-medium">No projects found matching '{searchQuery}'</p>
-						{#if searchQuery}
-							<button
-								on:click={() => searchQuery = ''}
-								class="px-4 py-2 bg-gray-100 text-gray-600 font-medium rounded hover:bg-gray-200 transition"
-							>
-								Clear Search
-							</button>
+						{#if projects.length === 0}
+							<p class="text-gray-500 mb-2 font-medium">No projects yet</p>
+							<button on:click={startNewProject} class="text-blue-600 text-sm font-medium hover:underline">Create your first project</button>
+						{:else}
+							<p class="text-gray-500 font-medium">No projects match '{searchQuery}'</p>
+							<button on:click={() => searchQuery = ''} class="mt-2 text-blue-600 text-sm font-medium hover:underline">Clear search</button>
 						{/if}
 					</div>
+				{/if}
 				{/if}
 			</div>
 		</div>
