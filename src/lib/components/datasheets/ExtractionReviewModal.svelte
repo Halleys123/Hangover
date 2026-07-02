@@ -7,9 +7,10 @@
 		name: string;
 		size: string;
 		parsed: boolean;
-		status?: string;
+		status?: 'waiting' | 'processing' | 'completed' | 'failed';
 		verificationStatus?: 'unverified' | 'accepted' | 'rejected';
 		userNotes?: string;
+		uploadedAt: string;
 		cogneeConfig: Record<string, unknown> | null;
 	}
 
@@ -22,6 +23,8 @@
 	let { datasheet, onClose, onUpdated }: Props = $props();
 
 	let isImproving = $state(false);
+	let improveTab = $state<'ai' | 'manual'>('ai');
+	let refiningAi = $state(false);
 	let feedbackText = $state('');
 	let editedSpecsJson = $state('');
 	let jsonError = $state('');
@@ -80,6 +83,23 @@
 			alert(err.message || 'Failed to save improvements');
 		} finally {
 			loadingAction = false;
+		}
+	}
+
+	async function handleAiRefine() {
+		if (!datasheet) return;
+		refiningAi = true;
+		try {
+			const updated = await api.post<Datasheet>(`/datasheets/${datasheet._id}/refine`, {
+				prompt: feedbackText.trim()
+			});
+			onUpdated(updated);
+			isImproving = false;
+			onClose();
+		} catch (err: any) {
+			alert(err.message || 'AI refinement failed');
+		} finally {
+			refiningAi = false;
 		}
 	}
 
@@ -149,35 +169,82 @@
 					{:else}
 						<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 							{#each Object.entries(datasheet.cogneeConfig) as [key, value]}
-								<div class="p-3.5 bg-slate-50 dark:bg-zinc-800/80 border border-slate-200/80 dark:border-zinc-700/80 rounded-2xl">
+								<div class="p-3.5 bg-slate-50 dark:bg-zinc-800/80 border border-slate-200/80 dark:border-zinc-700/80 rounded-2xl {typeof value === 'object' && value !== null ? 'col-span-1 sm:col-span-2' : ''}">
 									<span class="block text-[11px] font-semibold text-slate-500 dark:text-zinc-400 mb-1">{key}</span>
-									<span class="text-sm font-bold text-slate-900 dark:text-white break-words">{typeof value === 'string' ? value : JSON.stringify(value)}</span>
+									{#if typeof value === 'object' && value !== null}
+										<pre class="text-xs font-mono text-slate-800 dark:text-zinc-200 bg-slate-100 dark:bg-zinc-900 p-2.5 rounded-xl overflow-x-auto mt-1 leading-relaxed">{JSON.stringify(value, null, 2)}</pre>
+									{:else}
+										<span class="text-sm font-bold text-slate-900 dark:text-white break-words">{value}</span>
+									{/if}
 								</div>
 							{/each}
 						</div>
 					{/if}
 				</div>
 			{:else}
-				<!-- Improve Mode: Edit JSON & Notes -->
+				<!-- Improve Mode: AI Refine or Manual JSON -->
 				<div class="space-y-4 animate-fadeIn">
-					<div class="flex items-center justify-between">
-						<h4 class="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Refine Specifications (JSON Editor)</h4>
-						<button onclick={() => (isImproving = false)} class="text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline">Cancel Editing</button>
+					<div class="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-3">
+						<div class="flex gap-2">
+							<button
+								type="button"
+								onclick={() => (improveTab = 'ai')}
+								class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 {improveTab === 'ai' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}"
+							>
+								✨ AI Refine (Recommended)
+							</button>
+							<button
+								type="button"
+								onclick={() => (improveTab = 'manual')}
+								class="px-3 py-1.5 rounded-xl text-xs font-bold transition {improveTab === 'manual' ? 'bg-slate-800 dark:bg-zinc-700 text-white shadow-sm' : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'}"
+							>
+								Manual JSON Override
+							</button>
+						</div>
+						<button onclick={() => (isImproving = false)} class="text-xs text-slate-500 dark:text-zinc-400 font-medium hover:underline">Cancel</button>
 					</div>
 
-					{#if jsonError}
-						<div class="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-xl text-xs text-rose-600 dark:text-rose-400 font-medium">{jsonError}</div>
+					{#if improveTab === 'ai'}
+						<div class="p-4 bg-indigo-50/60 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/50 rounded-2xl space-y-3">
+							<p class="text-xs text-indigo-900 dark:text-indigo-200 leading-relaxed">
+								Instruct Cognee AI on what specific parameters, pinout terminals, or dimensional accuracy to re-extract or format deterministically. Or leave blank for an automatic deep engineering re-analysis.
+							</p>
+							<div>
+								<label class="block text-[11px] font-bold text-indigo-950 dark:text-indigo-300 uppercase tracking-wider mb-1.5" for="ai-prompt">Refinement Prompt</label>
+								<input
+									id="ai-prompt"
+									type="text"
+									bind:value={feedbackText}
+									placeholder="e.g. Extract exact 5-pin terminal block L, N, FG, -V, +V and output current limit"
+									class="w-full text-xs p-3.5 rounded-xl bg-white dark:bg-zinc-900 border border-indigo-300 dark:border-indigo-800 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+								/>
+							</div>
+							<div class="flex justify-end pt-1">
+								<button
+									type="button"
+									onclick={handleAiRefine}
+									disabled={refiningAi}
+									class="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-500/20 transition flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+								>
+									{#if refiningAi}
+										<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+										Cognee Re-Analyzing...
+									{:else}
+										✨ AI Re-Analyze & Refine Specs
+									{/if}
+								</button>
+							</div>
+						</div>
+					{:else}
+						{#if jsonError}
+							<div class="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-xl text-xs text-rose-600 dark:text-rose-400 font-medium">{jsonError}</div>
+						{/if}
+
+						<div>
+							<label class="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1.5" for="specs-json">Parameter Map (JSON)</label>
+							<textarea id="specs-json" bind:value={editedSpecsJson} rows="8" class="w-full font-mono text-xs p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-950 border border-slate-300 dark:border-zinc-800 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+						</div>
 					{/if}
-
-					<div>
-						<label class="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1.5" for="specs-json">Parameter Map (JSON)</label>
-						<textarea id="specs-json" bind:value={editedSpecsJson} rows="8" class="w-full font-mono text-xs p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-950 border border-slate-300 dark:border-zinc-800 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-					</div>
-
-					<div>
-						<label class="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1.5" for="feedback-notes">Engineering Notes / Correction Prompt</label>
-						<input id="feedback-notes" type="text" bind:value={feedbackText} placeholder="e.g. Pin 12 is MISO, logic level is 3.3V max" class="w-full text-xs p-3 rounded-xl bg-slate-50 dark:bg-zinc-950 border border-slate-300 dark:border-zinc-800 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-					</div>
 				</div>
 			{/if}
 		</div>
@@ -186,22 +253,31 @@
 		<div class="px-6 py-4 border-t border-slate-200 dark:border-zinc-800 bg-slate-50/80 dark:bg-zinc-900/80 flex items-center justify-between flex-wrap gap-3">
 			<button
 				onclick={handleForget}
-				disabled={loadingAction}
-				class="px-4 py-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 text-xs font-bold rounded-xl border border-rose-200 dark:border-rose-900/60 transition flex items-center gap-1.5 disabled:opacity-50"
+				disabled={loadingAction || refiningAi}
+				class="px-4 py-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 text-xs font-bold rounded-xl border border-rose-200 dark:border-rose-900/60 transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
 			>
 				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
 				Forget / Discard
 			</button>
 
 			<div class="flex items-center gap-3">
-				<button
-					onclick={handleImprove}
-					disabled={loadingAction}
-					class="px-4 py-2 bg-slate-200 dark:bg-zinc-800 hover:bg-slate-300 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-200 text-xs font-bold rounded-xl transition flex items-center gap-1.5 disabled:opacity-50"
-				>
-					<svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-					{isImproving ? 'Save Improvements' : 'Improve / Edit'}
-				</button>
+				{#if !isImproving}
+					<button
+						onclick={handleImprove}
+						disabled={loadingAction || refiningAi}
+						class="px-4 py-2 bg-slate-200 dark:bg-zinc-800 hover:bg-slate-300 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-200 text-xs font-bold rounded-xl transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+					>
+						✨ Improve / Refine with AI
+					</button>
+				{:else if improveTab === 'manual'}
+					<button
+						onclick={handleImprove}
+						disabled={loadingAction || refiningAi}
+						class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+					>
+						Save Manual JSON
+					</button>
+				{/if}
 
 				{#if !isImproving}
 					<button

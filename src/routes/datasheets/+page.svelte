@@ -26,7 +26,7 @@
 	let pdfBlobUrl = $state<string | null>(null);
 	let loadingPdf = $state(false);
 	let uploadError = $state('');
-	let pendingFile = $state<File | null>(null);
+	let pendingFiles = $state<File[]>([]);
 	let reviewModalSheet = $state<Datasheet | null>(null);
 
 	let pollTimer: any = null;
@@ -56,7 +56,7 @@
 	});
 
 	async function viewDatasheet(id: string) {
-		if (pendingFile) cancelUpload();
+		if (pendingFiles.length > 0) cancelUpload();
 		if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl);
 		selectedId = id;
 		loadingPdf = true;
@@ -77,28 +77,30 @@
 
 	function handleFileSelect(e: Event) {
 		const input = e.target as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
+		const files = input.files ? Array.from(input.files) : [];
+		if (files.length === 0) return;
 		
 		uploadError = '';
 		if (pdfBlobUrl && !selectedId) URL.revokeObjectURL(pdfBlobUrl);
-		pdfBlobUrl = URL.createObjectURL(file);
-		pendingFile = file;
+		pdfBlobUrl = URL.createObjectURL(files[0]);
+		pendingFiles = files;
 		selectedId = null;
 		input.value = '';
 	}
 
 	async function confirmUpload() {
-		if (!pendingFile) return;
+		if (pendingFiles.length === 0) return;
 		uploading = true;
 		uploadError = '';
 		try {
 			const form = new FormData();
-			form.append('file', pendingFile);
-			const sheet = await api.upload<Datasheet>('/datasheets', form);
-			datasheets = [sheet, ...datasheets];
-			pendingFile = null;
-			selectedId = sheet._id;
+			form.append('multi', pendingFiles.length > 1 ? 'true' : 'false');
+			pendingFiles.forEach(f => form.append('files', f));
+			const res = await api.upload<Datasheet | Datasheet[]>('/datasheets', form);
+			const newSheets = Array.isArray(res) ? res : [res];
+			datasheets = [...newSheets, ...datasheets];
+			pendingFiles = [];
+			if (newSheets.length > 0) selectedId = newSheets[0]._id;
 		} catch (err: any) {
 			uploadError = err.message;
 		} finally {
@@ -107,7 +109,7 @@
 	}
 
 	function cancelUpload() {
-		pendingFile = null;
+		pendingFiles = [];
 		if (pdfBlobUrl && !selectedId) URL.revokeObjectURL(pdfBlobUrl);
 		pdfBlobUrl = null;
 		uploadError = '';
@@ -148,7 +150,7 @@
 			{:else if pdfBlobUrl}
 				<div class="relative w-full h-full">
 					<button 
-						onclick={() => { URL.revokeObjectURL(pdfBlobUrl!); pdfBlobUrl = null; selectedId = null; if (pendingFile) cancelUpload(); }}
+						onclick={() => { URL.revokeObjectURL(pdfBlobUrl!); pdfBlobUrl = null; selectedId = null; if (pendingFiles.length > 0) cancelUpload(); }}
 						class="absolute top-4 right-6 z-10 px-4 py-2 bg-slate-900/70 hover:bg-rose-600 text-white rounded-lg backdrop-blur shadow-lg text-xs font-bold flex items-center gap-2 transition-colors border border-white/10"
 					>
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -176,12 +178,14 @@
 				<div class="mb-2 p-2 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 rounded text-xs text-red-600 dark:text-red-400">{uploadError}</div>
 				{/if}
 
-				{#if pendingFile}
+				{#if pendingFiles.length > 0}
 					<div class="flex flex-col gap-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-900/50 mb-3">
-						<p class="text-xs text-blue-900 dark:text-blue-200 font-medium truncate">Previewing: {pendingFile.name}</p>
+						<p class="text-xs text-blue-900 dark:text-blue-200 font-medium truncate">
+							{pendingFiles.length === 1 ? `Previewing: ${pendingFiles[0].name}` : `Ready to upload ${pendingFiles.length} files`}
+						</p>
 						<div class="flex gap-2">
 							<button onclick={confirmUpload} disabled={uploading} class="flex-1 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 disabled:opacity-50 transition">
-								{uploading ? 'Saving…' : 'Confirm Upload'}
+								{uploading ? 'Saving…' : `Confirm Upload (${pendingFiles.length})`}
 							</button>
 							<button onclick={cancelUpload} disabled={uploading} class="px-3 py-1.5 bg-slate-200 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-xs font-medium rounded hover:bg-slate-300 dark:hover:bg-zinc-700 disabled:opacity-50 transition">
 								Cancel
@@ -193,8 +197,8 @@
 						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
 						</svg>
-						Upload PDF Datasheet
-						<input type="file" accept=".pdf" class="hidden" onchange={handleFileSelect} disabled={uploading} />
+						Upload PDF Datasheet(s)
+						<input type="file" accept=".pdf" multiple class="hidden" onchange={handleFileSelect} disabled={uploading} />
 					</label>
 				{/if}
 			</div>
