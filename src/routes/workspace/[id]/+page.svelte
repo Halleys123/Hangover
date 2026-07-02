@@ -51,6 +51,7 @@
     let workspaceId = $state($page.params.id);
     let projectName = $state('');
     let projectDatasheets = $state<any[]>([]);
+    let projectComponents = $state<string[]>([]);
     let projectLoading = $state(true);
     let saveStatus = $state<'idle' | 'saving' | 'saved'>('idle');
     let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -185,6 +186,7 @@
             const project = await api.get<any>(`/projects/${workspaceId}`);
             projectName = project.name;
             projectDatasheets = project.datasheets || [];
+            projectComponents = project.components || [];
             nodes.set(project.canvas?.nodes ?? []);
             edges.set(project.canvas?.edges ?? []);
             
@@ -223,15 +225,34 @@
         }
     }
 
+    /**
+     * Semantic Drop Handler:
+     * Evaluates dropped component attributes when dragging from the hardware library onto the canvas.
+     * Enforces strict physical wire accuracy for 2-lead cooling hardware (Peltier TEC, DC Fans, Heatsinks)
+     * by assigning exactly (+) RED / VCC and (-) BLACK / GND leads without bogus SIG/DATA pins.
+     */
     function handleDropData(data: any, position: { x: number; y: number }) {
+        const compName = (data.name || '').toLowerCase();
+        const compDesc = (data.description || '').toLowerCase();
+        const compClass = ((data.cogneeConfig && data.cogneeConfig['Component Classification']) || '').toString().toLowerCase();
+        const is2WireCoolingUnit = compName.includes('tec') || compName.includes('peltier') || compName.includes('fhs') || compName.includes('cooler') || compName.includes('fan') || compClass.includes('cooler') || compClass.includes('fan');
+
         const defaultLeft = [
-            { id: "1", label: "PIN1", color: "gray" },
-            { id: "2", label: "PIN2", color: "gray" },
+            { id: "vcc", label: "VCC", color: "red" },
+            { id: "gnd", label: "GND", color: 'gray' },
         ];
         const defaultRight = [
-            { id: "3", label: "PIN3", color: "gray" },
-            { id: "4", label: "PIN4", color: "gray" },
+            { id: "sig", label: "SIG / DATA", color: "blue" },
         ];
+
+        // If dropping a 2-wire cooler/fan, strictly restrict to 2 power leads
+        const leftPins = is2WireCoolingUnit ? [
+            { id: 'vcc', label: '(+) RED / VCC', color: 'red' },
+            { id: 'gnd', label: '(-) BLACK / GND', color: 'gray' }
+        ] : (Array.isArray(data.diagram?.pins?.left) ? data.diagram.pins.left : defaultLeft);
+
+        const rightPins = is2WireCoolingUnit ? [] : (Array.isArray(data.diagram?.pins?.right) ? data.diagram.pins.right : defaultRight);
+
         const newNode = {
             id: Math.random().toString(),
             type: data.type || 'hardware',
@@ -240,8 +261,8 @@
                 label: data.name || 'Component',
                 theme: data.diagram?.theme || "blue",
                 pins: {
-                    left: Array.isArray(data.diagram?.pins?.left) ? data.diagram.pins.left : defaultLeft,
-                    right: Array.isArray(data.diagram?.pins?.right) ? data.diagram.pins.right : defaultRight,
+                    left: leftPins,
+                    right: rightPins,
                 },
             },
         };
@@ -254,6 +275,12 @@
         if (event.dataTransfer) {
             event.dataTransfer.dropEffect = "move";
         }
+    }
+
+    function handleCircuitGenerated(newNodes: any[], newEdges: any[]) {
+        nodes.set(newNodes);
+        edges.set(newEdges);
+        scheduleCanvasSave();
     }
 
     function handleBeforeUnload(e: BeforeUnloadEvent) {
@@ -310,7 +337,7 @@
                 style="width: {leftWidth}px;"
             >
                 <div
-                    class="px-4 py-3 border-b border-slate-200 dark:border-zinc-800 flex items-center gap-2 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white transition-colors"
+                    class="px-4 py-3 border-b border-slate-200 dark:border-zinc-800 flex items-center gap-2 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white transition-colors shrink-0"
                 >
                     <svg
                         class="w-5 h-5 text-blue-600 dark:text-blue-400"
@@ -323,7 +350,9 @@
                     </svg>
                     <h2 class="font-semibold text-sm">AI Copilot</h2>
                 </div>
-                <AIChatPanel bind:isPopoverOpen />
+                <div class="flex-1 flex flex-col min-h-0 w-full overflow-hidden">
+                    <AIChatPanel bind:isPopoverOpen {workspaceId} onCircuitGenerated={handleCircuitGenerated} />
+                </div>
             </div>
             <div
                 class="w-1 shrink-0 cursor-col-resize bg-slate-200 dark:bg-zinc-800 hover:bg-blue-400 active:bg-blue-500 transition-colors"
@@ -378,7 +407,7 @@
                 class="bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 flex flex-col z-20 shrink-0 min-h-0 text-slate-900 dark:text-white transition-colors"
                 style="width: {rightWidth}px;"
             >
-                <RightLibraryPanel {workspaceId} bind:projectDatasheets />
+                <RightLibraryPanel {workspaceId} bind:projectDatasheets bind:projectComponents />
             </div>
         {/if}
     </div>
