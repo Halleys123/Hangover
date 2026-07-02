@@ -47,7 +47,9 @@
 		"svelte"
 	],
 	"dependencies": {
+		"@types/marked": "^5.0.2",
 		"@xyflow/svelte": "^1.6.1",
-		"@xyflow/system": "^0.0.78"
+		"@xyflow/system": "^0.0.78",
+		"marked": "^18.0.5"
 	}
 }
