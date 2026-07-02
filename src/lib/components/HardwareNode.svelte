@@ -47,7 +47,7 @@
 </script>
 
 <!-- Outer Container -->
-<div class="{colors.bg} rounded-xl border {colors.border} {colors.shadow} p-4 font-mono w-48 relative"
+<div class="{colors.bg} rounded-xl border {colors.border} {colors.shadow} p-4 font-mono min-w-[15rem] max-w-[22rem] w-auto relative"
 	 style="background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 10px 10px;">
 	
 	<!-- Header -->
@@ -56,12 +56,12 @@
 		<h3 class="{colors.header} text-sm font-bold tracking-widest">{data.label}</h3>
 	</div>
 
-	<div class="flex justify-between relative min-h-[120px]">
+	<div class="flex justify-between gap-6 relative min-h-[120px]">
 		<!-- Center Chip -->
 		<div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded {colors.chip} border"></div>
 
 		<!-- Left Pins -->
-		<div class="flex flex-col gap-4 relative z-10 w-full">
+		<div class="flex flex-col gap-4 relative z-10 w-full justify-start">
 			{#each data?.pins?.left ?? [] as pin, i}
 				<div class="flex items-center justify-start relative w-full h-4">
 					<Handle 
@@ -72,16 +72,16 @@
 					>
 						<div class="w-3 h-3 rounded-full {getPinColorClass(pin.color)}"></div>
 					</Handle>
-					<span class="text-[9px] text-slate-400 ml-1 font-bold">{pin.label}</span>
+					<span class="text-[9px] text-slate-400 ml-1 font-bold whitespace-nowrap">{pin.label}</span>
 				</div>
 			{/each}
 		</div>
 
 		<!-- Right Pins -->
-		<div class="flex flex-col gap-4 relative z-10 w-full text-right mt-auto">
+		<div class="flex flex-col gap-4 relative z-10 w-full text-right justify-start">
 			{#each data?.pins?.right ?? [] as pin, i}
 				<div class="flex items-center justify-end relative w-full h-4">
-					<span class="text-[9px] text-slate-400 mr-1 font-bold">{pin.label}</span>
+					<span class="text-[9px] text-slate-400 mr-1 font-bold whitespace-nowrap">{pin.label}</span>
 					<Handle 
 						type="source" 
 						position={Position.Right} 
