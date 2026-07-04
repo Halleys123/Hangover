@@ -34,6 +34,31 @@
 	let showErrorModal = $state(false);
 	let abortController = $state<AbortController | null>(null);
 	let pollingInterval: ReturnType<typeof setInterval> | null = null;
+	let isEditingTitle = $state(false);
+	let newTitleValue = $state('');
+
+	function startRename() {
+		const currentSession = sessions.find(s => s._id === activeSessionId);
+		if (currentSession) {
+			newTitleValue = currentSession.title;
+			isEditingTitle = true;
+		}
+	}
+
+	async function handleSaveTitle() {
+		const trimmedTitle = newTitleValue.trim();
+		if (!trimmedTitle || !workspaceId || !activeSessionId) {
+			isEditingTitle = false;
+			return;
+		}
+		try {
+			await api.put(`/projects/${workspaceId}/chat/sessions/${activeSessionId}/rename`, { title: trimmedTitle });
+			isEditingTitle = false;
+			await loadSessions();
+		} catch (err) {
+			console.error('Failed to rename session title:', err);
+		}
+	}
 
 	async function loadSessions() {
 		if (!workspaceId) return;
@@ -197,15 +222,54 @@
 	<!-- Chat Panel Header with New Chat Button & Session Selector -->
 	{#if workspaceId}
 	<div class="px-4 py-2 border-b border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 flex items-center justify-between gap-2 shrink-0">
-		<!-- Active Session Selector Dropdown -->
-		<select
-			bind:value={activeSessionId}
-			class="bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 rounded px-2 py-1 text-[11px] font-medium outline-none focus:border-blue-500 transition max-w-[140px]"
-		>
-			{#each sessions as session}
-				<option value={session._id}>{session.title}</option>
-			{/each}
-		</select>
+		<div class="flex items-center gap-1.5 min-w-0 flex-1">
+			{#if isEditingTitle}
+				<input
+					type="text"
+					bind:value={newTitleValue}
+					onkeydown={(e) => { if (e.key === 'Enter') handleSaveTitle(); if (e.key === 'Escape') isEditingTitle = false; }}
+					class="bg-white dark:bg-zinc-850 border border-slate-300 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 rounded px-1.5 py-0.5 text-[11px] font-medium outline-none focus:border-blue-500 transition w-full max-w-[150px]"
+					autofocus
+				/>
+				<button
+					onclick={handleSaveTitle}
+					class="p-0.5 text-green-600 dark:text-green-400 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded transition shrink-0"
+					title="Save Title"
+				>
+					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+					</svg>
+				</button>
+				<button
+					onclick={() => isEditingTitle = false}
+					class="p-0.5 text-red-500 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded transition shrink-0"
+					title="Cancel"
+				>
+					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+					</svg>
+				</button>
+			{:else}
+				<select
+					bind:value={activeSessionId}
+					class="bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 rounded px-2 py-1 text-[11px] font-medium outline-none focus:border-blue-500 transition max-w-[140px] truncate"
+				>
+					{#each sessions as session}
+						<option value={session._id}>{session.title}</option>
+					{/each}
+				</select>
+				<button
+					onclick={startRename}
+					disabled={loading}
+					class="p-1 text-slate-400 dark:text-zinc-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded transition shrink-0"
+					title="Rename Chat Session"
+				>
+					<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"/>
+					</svg>
+				</button>
+			{/if}
+		</div>
 
 		<button
 			onclick={handleNewChat}
