@@ -314,11 +314,11 @@
         {#if leftCollapsed}
             <button
                 onclick={() => (leftCollapsed = false)}
-                class="w-6 shrink-0 flex items-center justify-center border-r border-gray-200 bg-white hover:bg-gray-50 group"
+                class="w-6 shrink-0 flex items-center justify-center border-r border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 group transition-colors"
                 title="Show AI Copilot panel"
             >
                 <svg
-                    class="w-4 h-4 text-gray-400 group-hover:text-blue-600"
+                    class="w-4 h-4 text-slate-400 dark:text-zinc-500 group-hover:text-blue-600 dark:group-hover:text-blue-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -337,18 +337,29 @@
                 style="width: {leftWidth}px;"
             >
                 <div
-                    class="px-4 py-3 border-b border-slate-200 dark:border-zinc-800 flex items-center gap-2 bg-white dark:bg-zinc-900 text-slate-900 dark:text-white transition-colors shrink-0"
+                    class="px-4 py-3 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-zinc-900 text-slate-900 dark:text-white transition-colors shrink-0"
                 >
-                    <svg
-                        class="w-5 h-5 text-blue-600 dark:text-blue-400"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
+                    <div class="flex items-center gap-2">
+                        <svg
+                            class="w-5 h-5 text-blue-600 dark:text-blue-400"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                        >
+                            <path
+                                d="M10 2a8 8 0 100 16 8 8 0 000-16zM8 12a1 1 0 11-2 0 1 1 0 012 0zm4 0a1 1 0 11-2 0 1 1 0 012 0zm-2-4a1 1 0 11-2 0 1 1 0 012 0z"
+                            />
+                        </svg>
+                        <h2 class="font-semibold text-sm">AI Copilot</h2>
+                    </div>
+                    <button
+                        onclick={() => (leftCollapsed = true)}
+                        class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+                        title="Collapse panel"
                     >
-                        <path
-                            d="M10 2a8 8 0 100 16 8 8 0 000-16zM8 12a1 1 0 11-2 0 1 1 0 012 0zm4 0a1 1 0 11-2 0 1 1 0 012 0zm-2-4a1 1 0 11-2 0 1 1 0 012 0z"
-                        />
-                    </svg>
-                    <h2 class="font-semibold text-sm">AI Copilot</h2>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
                 </div>
                 <div class="flex-1 flex flex-col min-h-0 w-full overflow-hidden">
                     <AIChatPanel bind:isPopoverOpen {workspaceId} onCircuitGenerated={handleCircuitGenerated} />
@@ -407,7 +418,21 @@
                 class="bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 flex flex-col z-20 shrink-0 min-h-0 text-slate-900 dark:text-white transition-colors"
                 style="width: {rightWidth}px;"
             >
-                <RightLibraryPanel {workspaceId} bind:projectDatasheets bind:projectComponents />
+                <div class="px-4 py-3 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-zinc-900 text-slate-900 dark:text-white transition-colors shrink-0">
+                    <h2 class="font-semibold text-sm">Library</h2>
+                    <button
+                        onclick={() => (rightCollapsed = true)}
+                        class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+                        title="Collapse panel"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="flex-grow flex flex-col min-h-0 w-full overflow-hidden">
+                    <RightLibraryPanel {workspaceId} bind:projectDatasheets bind:projectComponents />
+                </div>
             </div>
         {/if}
     </div>
@@ -416,5 +441,41 @@
 <style>
     :global(body) {
         overflow: hidden;
+    }
+    :global(.svelte-flow__controls) {
+        background-color: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+        overflow: hidden !important;
+    }
+    :global(.dark .svelte-flow__controls) {
+        background-color: #18181b !important;
+        border: 1px solid #27272a !important;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.5) !important;
+    }
+    :global(.svelte-flow__controls-button) {
+        background-color: transparent !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        color: #475569 !important;
+        fill: #475569 !important;
+        transition: background-color 0.15s ease !important;
+    }
+    :global(.svelte-flow__controls-button svg) {
+        fill: currentColor !important;
+    }
+    :global(.svelte-flow__controls-button:hover) {
+        background-color: #f1f5f9 !important;
+    }
+    :global(.dark .svelte-flow__controls-button) {
+        border-bottom: 1px solid #27272a !important;
+        color: #a1a1aa !important;
+        fill: #a1a1aa !important;
+    }
+    :global(.dark .svelte-flow__controls-button:hover) {
+        background-color: #27272a !important;
+    }
+    :global(.svelte-flow__controls-button:last-child) {
+        border-bottom: none !important;
     }
 </style>
