@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
+	import { page } from '$app/stores';
 	import NavBar from '$lib/components/NavBar.svelte';
 	import { authUser, getToken } from '$lib/stores/auth';
 	import { api } from '$lib/api';
@@ -19,6 +20,10 @@
 		cogneeConfig: Record<string, unknown> | null;
 	}
 
+	interface Props {
+		// optional props
+	}
+
 	let datasheets = $state<Datasheet[]>([]);
 	let loading = $state(true);
 	let uploading = $state(false);
@@ -29,22 +34,49 @@
 	let pendingFiles = $state<File[]>([]);
 	let reviewModalSheet = $state<Datasheet | null>(null);
 
+	let projectId = $derived($page.url.searchParams.get('project') || '');
+	let projectName = $state('');
+	let projectDatasheetIds = $state<string[]>([]);
+
 	let pollTimer: any = null;
 
 	onMount(async () => {
 		if (!$authUser) { goto('/login'); return; }
+
+		const activeProject = $page.url.searchParams.get('project');
+		if (activeProject) {
+			try {
+				const project = await api.get<any>(`/projects/${activeProject}`);
+				projectName = project.name;
+				projectDatasheetIds = (project.datasheets || []).map((d: any) => d._id || d.toString());
+			} catch (e) {
+				console.error('Failed to load project details for filtering:', e);
+			}
+		}
+
 		try {
-			datasheets = await api.get<Datasheet[]>('/datasheets');
+			const allSheets = await api.get<Datasheet[]>('/datasheets');
+			if (activeProject) {
+				datasheets = allSheets.filter(d => projectDatasheetIds.includes(d._id));
+			} else {
+				datasheets = allSheets;
+			}
 		} catch { }
 		finally { loading = false; }
 
 		pollTimer = setInterval(async () => {
-			if (datasheets.some(d => d.status === 'waiting' || d.status === 'processing' || (!d.parsed && d.status !== 'failed'))) {
+			const hasPending = datasheets.some(d => d.status === 'waiting' || d.status === 'processing' || (!d.parsed && d.status !== 'failed'));
+			if (hasPending) {
 				try {
 					const updated = await api.get<Datasheet[]>('/datasheets');
-					datasheets = updated;
-					if (selectedId) {
-						// Optionally update selected item if needed
+					if (activeProject) {
+						try {
+							const project = await api.get<any>(`/projects/${activeProject}`);
+							projectDatasheetIds = (project.datasheets || []).map((d: any) => d._id || d.toString());
+						} catch {}
+						datasheets = updated.filter(d => projectDatasheetIds.includes(d._id));
+					} else {
+						datasheets = updated;
 					}
 				} catch { }
 			}
@@ -96,8 +128,24 @@
 			const form = new FormData();
 			form.append('multi', pendingFiles.length > 1 ? 'true' : 'false');
 			pendingFiles.forEach(f => form.append('files', f));
+			if (projectId) {
+				form.append('projectId', projectId);
+			}
 			const res = await api.upload<Datasheet | Datasheet[]>('/datasheets', form);
 			const newSheets = Array.isArray(res) ? res : [res];
+
+			const activeProject = $page.url.searchParams.get('project');
+			if (activeProject) {
+				for (const s of newSheets) {
+					try {
+						await api.post(`/projects/${activeProject}/datasheets`, { datasheetId: s._id });
+						projectDatasheetIds.push(s._id);
+					} catch (e) {
+						console.error('Failed to link uploaded datasheet to project:', e);
+					}
+				}
+			}
+
 			datasheets = [...newSheets, ...datasheets];
 			pendingFiles = [];
 			if (newSheets.length > 0) selectedId = newSheets[0]._id;
@@ -135,7 +183,14 @@
 
 <!-- DATASHEET INGESTION & LIBRARY PAGE -->
 <div class="h-screen flex flex-col bg-slate-50 dark:bg-zinc-950 transition-colors duration-200 overflow-hidden">
-	<NavBar activeLink="datasheets" showBack={true} onLogoClick={() => goto('/')} />
+	<NavBar 
+		activeLink="datasheets" 
+		showBack={true} 
+		onLogoClick={projectId ? () => goto(`/workspace/${projectId}`) : () => goto('/')} 
+		onBackClick={projectId ? () => goto(`/workspace/${projectId}`) : () => goto('/workspace')}
+		projectName={projectName}
+		projectId={projectId}
+	/>
 
 	<div class="flex-1 flex overflow-hidden">
 		<!-- Left: PDF Viewer -->

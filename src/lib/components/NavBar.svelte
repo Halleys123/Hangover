@@ -12,6 +12,8 @@
 		compact?: boolean;
 		showBack?: boolean;
 		onBackClick?: () => void;
+		projectName?: string;
+		projectId?: string;
 	}
 
 	let {
@@ -22,7 +24,9 @@
 		wide = false,
 		compact = false,
 		showBack = false,
-		onBackClick
+		onBackClick,
+		projectName = '',
+		projectId = ''
 	}: Props = $props();
 
 	let isDark = $state(false);
@@ -82,20 +86,26 @@
 						<path d="M12 2L2 7l10 5 10-5-10-5zm0 10L2 17l10 5 10-5-10-5z" fill="currentColor"/>
 					</svg>
 				</div>
-				<h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Hardware Prototyping Copilot</h1>
+				<div class="flex items-center gap-2">
+					<h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Hardware Prototyping Copilot</h1>
+					{#if projectName}
+						<span class="text-slate-300 dark:text-zinc-700">|</span>
+						<span class="text-xs font-semibold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/60 max-w-[150px] truncate" title={projectName}>{projectName}</span>
+					{/if}
+				</div>
 			</div>
 		</div>
 
 		<!-- NAVIGATION LINKS & ACTIONS -->
 		<div class="flex items-center gap-6">
 			<a
-				href="/workspace"
+				href={projectId ? `/workspace/${projectId}` : '/workspace'}
 				class={activeLink === 'workspace'
 					? `text-indigo-600 dark:text-indigo-400 font-semibold border-b-2 border-indigo-600 dark:border-indigo-400 ${compact ? 'pb-3.5 -mb-3.5' : 'pb-4 -mb-4'}`
 					: 'text-slate-500 dark:text-zinc-400 font-medium hover:text-slate-900 dark:hover:text-white transition-colors'}
 			>Workspace</a>
 			<a
-				href="/datasheets"
+				href={projectId ? `/datasheets?project=${projectId}` : '/datasheets'}
 				class={activeLink === 'datasheets'
 					? `text-indigo-600 dark:text-indigo-400 font-semibold border-b-2 border-indigo-600 dark:border-indigo-400 ${compact ? 'pb-3.5 -mb-3.5' : 'pb-4 -mb-4'}`
 					: 'text-slate-500 dark:text-zinc-400 font-medium hover:text-slate-900 dark:hover:text-white transition-colors'}

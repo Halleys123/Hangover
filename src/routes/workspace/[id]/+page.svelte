@@ -27,7 +27,7 @@
     };
 
     let svelteFlowInstance = $state<any>(null);
-
+    
     interface Component {
         id: string;
         name: string;
@@ -134,7 +134,7 @@
 
     function openDatasheetIngestion() {
         if (confirmLeave()) {
-            goto("/datasheets");
+            goto(`/datasheets?project=${workspaceId}`);
         }
     }
 
@@ -270,6 +270,15 @@
         nodes.update((nds) => [...nds, newNode]);
     }
 
+    function handleComponentClicked(comp: any) {
+        const offset = Math.floor(Math.random() * 60) - 30;
+        const position = {
+            x: 250 + offset,
+            y: 180 + offset
+        };
+        handleDropData(comp, position);
+    }
+
     function handleDragOver(event: DragEvent) {
         event.preventDefault();
         if (event.dataTransfer) {
@@ -291,6 +300,10 @@
     }
 </script>
 
+<svelte:head>
+	<title>{projectName}</title>
+</svelte:head>
+
 <svelte:window
     on:pointermove={handlePointerMove}
     on:pointerup={handlePointerUp}
@@ -307,6 +320,8 @@
             onAction={manualSaveCanvas}
             wide
             compact
+            projectName={projectName}
+            projectId={workspaceId}
         />
     {/if}
 
@@ -314,11 +329,11 @@
         {#if leftCollapsed}
             <button
                 onclick={() => (leftCollapsed = false)}
-                class="w-6 shrink-0 flex items-center justify-center border-r border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 group transition-colors"
+                class="w-6 shrink-0 flex flex-col items-center justify-center gap-4 py-4 border-r border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 group transition-colors"
                 title="Show AI Copilot panel"
             >
                 <svg
-                    class="w-4 h-4 text-slate-400 dark:text-zinc-500 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                    class="w-4 h-4 text-slate-400 dark:text-zinc-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 shrink-0"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -330,6 +345,9 @@
                         d="M9 5l7 7-7 7"
                     />
                 </svg>
+                <span class="text-[9px] font-bold tracking-widest text-slate-400 dark:text-zinc-500 uppercase select-none group-hover:text-blue-600 dark:group-hover:text-blue-400 [writing-mode:vertical-lr] rotate-180">
+                    AI Copilot
+                </span>
             </button>
         {:else}
             <div
@@ -392,11 +410,11 @@
         {#if rightCollapsed}
             <button
                 onclick={() => (rightCollapsed = false)}
-                class="w-6 shrink-0 flex items-center justify-center border-l border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 group transition-colors"
+                class="w-6 shrink-0 flex flex-col items-center justify-center gap-4 py-4 border-l border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 group transition-colors"
                 title="Show Components panel"
             >
                 <svg
-                    class="w-4 h-4 text-slate-400 dark:text-zinc-500 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                    class="w-4 h-4 text-slate-400 dark:text-zinc-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 shrink-0"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -408,6 +426,9 @@
                         d="M15 19l-7-7 7-7"
                     />
                 </svg>
+                <span class="text-[9px] font-bold tracking-widest text-slate-400 dark:text-zinc-500 uppercase select-none group-hover:text-blue-600 dark:group-hover:text-blue-400 [writing-mode:vertical-lr] rotate-180">
+                    Library
+                </span>
             </button>
         {:else}
             <div
@@ -431,7 +452,12 @@
                     </button>
                 </div>
                 <div class="flex-grow flex flex-col min-h-0 w-full overflow-hidden">
-                    <RightLibraryPanel {workspaceId} bind:projectDatasheets bind:projectComponents />
+                    <RightLibraryPanel 
+                        {workspaceId} 
+                        bind:projectDatasheets 
+                        bind:projectComponents 
+                        onComponentClick={handleComponentClicked} 
+                    />
                 </div>
             </div>
         {/if}

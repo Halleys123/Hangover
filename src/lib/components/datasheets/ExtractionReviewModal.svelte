@@ -158,6 +158,10 @@
 				<strong>Why verify?</strong> Verified hardware parameters are indexed into your Cognee Knowledge Graph, allowing the AI Copilot to accurately inspect pin compatibility, logic voltage thresholds, and pull-up requirements during schematic prototyping.
 			</div>
 
+			<div class="bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-2xl p-4 text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
+				<strong>Note:</strong> This data is directly from the model after it is parsed, not from the database.
+			</div>
+
 			{#if !isImproving}
 				<!-- View Mode: Rendered Specs -->
 				<div>

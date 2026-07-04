@@ -15,28 +15,116 @@
 		timestamp: Date | string;
 	}
 
+	interface Session {
+		_id: string;
+		title: string;
+		updatedAt: string;
+	}
+
 	let messages = $state<Message[]>([
 		{ role: 'assistant', text: 'Hello! I am your **AI Hardware Architect**. Tell me what project or circuit goal you want to build!', timestamp: new Date() }
 	]);
 
+	let sessions = $state<Session[]>([]);
+	let activeSessionId = $state<string>('');
 	let inputValue = $state('');
 	let loading = $state(false);
 	let startingNewChat = $state(false);
+	let lastSentQuery = $state('');
+	let showErrorModal = $state(false);
+	let abortController = $state<AbortController | null>(null);
+	let pollingInterval: ReturnType<typeof setInterval> | null = null;
+
+	async function loadSessions() {
+		if (!workspaceId) return;
+		try {
+			const list = await api.get<Session[]>(`/projects/${workspaceId}/chat/sessions`);
+			sessions = list;
+			if (list.length > 0 && !activeSessionId) {
+				activeSessionId = list[0]._id;
+			}
+		} catch (e) {
+			console.error('Failed to load chat sessions:', e);
+		}
+	}
+
+	async function loadActiveSessionMessages() {
+		if (!workspaceId || !activeSessionId) return;
+		try {
+			const history = await api.get<Message[]>(`/projects/${workspaceId}/chat?sessionId=${activeSessionId}`);
+			messages = history;
+			const lastMsg = history[history.length - 1];
+			if (lastMsg && lastMsg.role === 'user') {
+				loading = true;
+				startPollingForAssistantResponse();
+			} else {
+				loading = false;
+			}
+		} catch (err) {
+			console.error('Error loading active session messages:', err);
+		}
+	}
+
+	function startPollingForAssistantResponse() {
+		if (pollingInterval) clearInterval(pollingInterval);
+		let attempts = 0;
+		const maxAttempts = 40; // up to 60 seconds
+
+		pollingInterval = setInterval(async () => {
+			attempts++;
+			if (attempts > maxAttempts) {
+				if (pollingInterval) clearInterval(pollingInterval);
+				pollingInterval = null;
+				loading = false;
+				return;
+			}
+			try {
+				const history = await api.get<Message[]>(`/projects/${workspaceId}/chat?sessionId=${activeSessionId}`);
+				if (Array.isArray(history) && history.length > 0) {
+					const lastMsg = history[history.length - 1];
+					if (lastMsg.role === 'assistant') {
+						messages = history;
+						loading = false;
+						if (pollingInterval) clearInterval(pollingInterval);
+						pollingInterval = null;
+					}
+				}
+			} catch (e) {
+				console.error('Error polling for response:', e);
+			}
+		}, 1500);
+	}
+
+	function stopGeneration() {
+		if (abortController) {
+			abortController.abort();
+			abortController = null;
+		}
+		if (pollingInterval) {
+			clearInterval(pollingInterval);
+			pollingInterval = null;
+		}
+		loading = false;
+	}
 
 	onMount(() => {
-		const loadChat = async () => {
+		const loadInitial = async () => {
 			if (workspaceId) {
-				try {
-					const history = await api.get<Message[]>(`/projects/${workspaceId}/chat`);
-					if (Array.isArray(history) && history.length > 0) {
-						messages = history;
-					}
-				} catch {}
+				await loadSessions();
 			}
 		};
-		loadChat();
-		window.addEventListener('chat-reset', loadChat);
-		return () => window.removeEventListener('chat-reset', loadChat);
+		loadInitial();
+		window.addEventListener('chat-reset', loadInitial);
+		return () => {
+			window.removeEventListener('chat-reset', loadInitial);
+			if (pollingInterval) clearInterval(pollingInterval);
+		};
+	});
+
+	$effect(() => {
+		if (activeSessionId) {
+			loadActiveSessionMessages();
+		}
 	});
 
 	async function handleNewChat() {
@@ -44,8 +132,9 @@
 		startingNewChat = true;
 		try {
 			const res = await api.post<any>(`/projects/${workspaceId}/chat/new`);
-			if (res && res.chatHistory) {
-				messages = res.chatHistory;
+			if (res && res.sessionId) {
+				activeSessionId = res.sessionId;
+				await loadSessions();
 			}
 		} catch (err) {
 			console.error('Failed to start new chat:', err);
@@ -59,24 +148,27 @@
 		const userText = inputValue.trim();
 		if (!userText || loading) return;
 
+		lastSentQuery = userText;
 		messages.push({ role: 'user', text: userText, timestamp: new Date() });
 		inputValue = '';
 		loading = true;
+		abortController = new AbortController();
 
 		try {
 			if (workspaceId) {
-				const res = await api.post<any>(`/projects/${workspaceId}/chat`, { query: userText });
-				messages.push({
-					role: 'assistant',
-					text: res.message || res.reply || 'Processed request.',
-					timestamp: new Date()
-				});
+				const res = await api.post<any>(
+					`/projects/${workspaceId}/chat`,
+					{ query: userText, sessionId: activeSessionId },
+					{ signal: abortController.signal }
+				);
+				
+				await loadActiveSessionMessages();
 
 				if (res.type === 'circuit_generated' && res.nodes && res.edges && onCircuitGenerated) {
 					onCircuitGenerated(res.nodes, res.edges);
 				}
 			} else {
-				const res = await api.post<any>('/chat', { message: userText, history: messages });
+				const res = await api.post<any>('/chat', { message: userText, history: messages }, { signal: abortController.signal });
 				messages.push({
 					role: 'assistant',
 					text: res.reply || res.message || 'I analyzed your query.',
@@ -84,26 +176,41 @@
 				});
 			}
 		} catch (err: any) {
-			messages.push({
-				role: 'assistant',
-				text: `Error communicating with AI service: ${err.message}`,
-				timestamp: new Date()
-			});
+			if (err.name === 'AbortError') {
+				messages.push({
+					role: 'assistant',
+					text: '*Generation stopped by user.*',
+					timestamp: new Date()
+				});
+			} else {
+				console.error('Send message error:', err);
+				showErrorModal = true;
+			}
 		} finally {
 			loading = false;
+			abortController = null;
 		}
 	}
 </script>
 
-<div class="flex-1 flex flex-col min-h-0 h-full w-full">
-	<!-- Chat Panel Header with New Chat Button -->
+<div class="flex-1 flex flex-col min-h-0 h-full w-full relative">
+	<!-- Chat Panel Header with New Chat Button & Session Selector -->
 	{#if workspaceId}
-	<div class="px-4 py-2 border-b border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 flex items-center justify-between shrink-0">
-		<span class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">AI Conversation</span>
+	<div class="px-4 py-2 border-b border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50 flex items-center justify-between gap-2 shrink-0">
+		<!-- Active Session Selector Dropdown -->
+		<select
+			bind:value={activeSessionId}
+			class="bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 rounded px-2 py-1 text-[11px] font-medium outline-none focus:border-blue-500 transition max-w-[140px]"
+		>
+			{#each sessions as session}
+				<option value={session._id}>{session.title}</option>
+			{/each}
+		</select>
+
 		<button
 			onclick={handleNewChat}
 			disabled={startingNewChat || loading}
-			class="flex items-center gap-1.5 px-2.5 py-1 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:border-blue-500 dark:hover:border-blue-500 text-slate-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 rounded text-[11px] font-semibold transition shadow-sm disabled:opacity-50"
+			class="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:border-blue-500 dark:hover:border-blue-500 text-slate-600 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-blue-400 rounded text-[11px] font-semibold transition shadow-sm disabled:opacity-50 shrink-0"
 			title="Start a fresh chat while preserving conversation summary for AI"
 		>
 			<svg class="w-3 h-3 {startingNewChat ? 'animate-spin' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -159,13 +266,62 @@
 	<!-- Input Area -->
 	<div class="p-4 bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 transition-colors shrink-0">
 		<form onsubmit={handleSendMessage} class="relative">
-			<input type="text" bind:value={inputValue} disabled={loading || startingNewChat} placeholder="Ask about wiring, components..." class="w-full pl-4 pr-10 py-2.5 bg-white dark:bg-zinc-800 border border-slate-300 dark:border-zinc-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-60 transition-colors" />
-			<button type="submit" disabled={loading || startingNewChat} class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-zinc-700 disabled:opacity-40 rounded transition-colors">
-				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-			</button>
+			<input
+				type="text"
+				bind:value={inputValue}
+				placeholder={loading ? 'AI is thinking…' : 'Ask Copilot to build a circuit…'}
+				disabled={loading}
+				class="w-full pl-4 pr-12 py-3 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-xl text-xs sm:text-sm text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all disabled:opacity-60"
+			/>
+			{#if loading}
+				<button
+					type="button"
+					onclick={stopGeneration}
+					class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-sm active:scale-95 transition-all"
+					title="Stop generating"
+				>
+					<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>
+				</button>
+			{:else}
+				<button
+					type="submit"
+					disabled={!inputValue.trim()}
+					class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-sm hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none active:scale-95 transition-all"
+				>
+					<svg class="w-4 h-4 rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+				</button>
+			{/if}
 		</form>
 	</div>
 </div>
+
+<!-- Error Regeneration Modal -->
+{#if showErrorModal}
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 dark:bg-zinc-950/60 backdrop-blur-xs px-4">
+		<div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-slate-200 dark:border-zinc-800 w-full max-w-sm p-6 space-y-4">
+			<h3 class="text-base font-semibold text-slate-900 dark:text-white">Generation Error</h3>
+			<p class="text-xs text-slate-500 dark:text-zinc-400 leading-relaxed">
+				An error occurred while generating the AI response. Would you like to try regenerating the response?
+			</p>
+			<div class="flex items-center justify-end gap-2.5 pt-2">
+				<button
+					type="button"
+					onclick={() => { showErrorModal = false; inputValue = lastSentQuery; }}
+					class="px-4 py-2 border border-slate-200 dark:border-zinc-700 rounded-xl text-xs font-semibold text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
+				>
+					Cancel
+				</button>
+				<button
+					type="button"
+					onclick={() => { showErrorModal = false; inputValue = lastSentQuery; handleSendMessage(); }}
+					class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition shadow-sm"
+				>
+					Regenerate
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	:global(.markdown-body p) { margin-bottom: 0.6rem; }

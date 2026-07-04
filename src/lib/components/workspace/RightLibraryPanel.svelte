@@ -9,6 +9,7 @@
 		name: string;
 		description: string;
 		diagram: { theme: string; pins: { left: any[]; right: any[] } };
+		datasheetId?: string;
 	}
 
 	interface Sheet {
@@ -25,9 +26,10 @@
 		workspaceId?: string;
 		projectDatasheets?: Sheet[];
 		projectComponents?: string[];
+		onComponentClick?: (comp: Comp) => void;
 	}
 
-	let { workspaceId, projectDatasheets = $bindable([]), projectComponents = $bindable([]) }: Props = $props();
+	let { workspaceId, projectDatasheets = $bindable([]), projectComponents = $bindable([]), onComponentClick }: Props = $props();
 
 	let rightTab = $state<'components' | 'datasheets'>('components');
 	let personalComponents = $state<Comp[]>([]);
@@ -58,11 +60,19 @@
 			: Array.from(new Map(personalComponents.map(c => [c.name.trim().toLowerCase(), c])).values())
 	);
 
-	// Catalog items available to add to this project (only user's extracted components not yet added)
+	// Catalog items available to add to this project (only user's extracted components not yet added and matching project's datasheets)
 	let availableCatalogList = $derived(
 		workspaceId
 			? Array.from(new Map([...personalComponents, ...catalogComponents]
-				.filter(c => !projectComponents.includes(c.name) && !projectComponents.includes(c._id))
+				.filter(c => {
+					if (!c.datasheetId) return false;
+					const cDsId = typeof c.datasheetId === 'object' ? (c.datasheetId as any)._id : c.datasheetId;
+					return (
+						!projectComponents.includes(c.name) && 
+						!projectComponents.includes(c._id) && 
+						projectDatasheets.some(d => d._id === cDsId)
+					);
+				})
 				.map(c => [c.name.trim().toLowerCase(), c])).values())
 			: Array.from(new Map([...personalComponents, ...catalogComponents].map(c => [c.name.trim().toLowerCase(), c])).values())
 	);
@@ -214,7 +224,10 @@
 	<div class="flex-1 overflow-y-auto transition-colors">
 		<!-- My Library (Scoped to current project) -->
 		<div class="p-3 pb-1">
-			<h3 class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-2">My Library</h3>
+			<h3 class="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1">My Library</h3>
+			<p class="text-[10px] text-slate-400 dark:text-zinc-500 leading-normal">
+				💡 Drag components onto the canvas or click them to place instantly.
+			</p>
 		</div>
 
 		{#if loadingComps}
@@ -236,7 +249,12 @@
 				<p class="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1.5">{category}</p>
 				<div class="space-y-1.5">
 					{#each comps as comp (comp._id || comp.name)}
-					<div draggable="true" ondragstart={(e) => handleDragStart(e, comp)} class="group p-2.5 border border-slate-200 dark:border-zinc-800 rounded cursor-grab hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-sm bg-white dark:bg-zinc-800/80 flex items-center justify-between gap-2.5 transition-colors">
+					<div 
+						draggable="true" 
+						ondragstart={(e) => handleDragStart(e, comp)} 
+						onclick={() => onComponentClick && onComponentClick(comp)}
+						class="group p-2.5 border border-slate-200 dark:border-zinc-800 rounded cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800/50 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-sm bg-white dark:bg-zinc-800/80 flex items-center justify-between gap-2.5 transition-colors"
+					>
 						<div class="flex items-center gap-2.5 min-w-0">
 							<svg class="w-4 h-4 text-slate-400 dark:text-zinc-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m14-6h2m-2 6h2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
 							<div class="min-w-0">
@@ -318,7 +336,7 @@
 			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
 			Attach from Library
 		</button>
-		<a href="/datasheets" class="flex items-center justify-center gap-2 w-full py-2 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition">
+		<a href={workspaceId ? `/datasheets?project=${workspaceId}` : '/datasheets'} class="flex items-center justify-center gap-2 w-full py-2 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition">
 			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
 			Upload New Datasheet
 		</a>
