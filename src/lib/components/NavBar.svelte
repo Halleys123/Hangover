@@ -4,7 +4,7 @@
 	import { goto } from '$app/navigation';
 
 	interface Props {
-		activeLink?: 'workspace' | 'datasheets';
+		activeLink?: 'home' | 'projects' | 'workspace' | 'datasheets';
 		onLogoClick?: () => void;
 		actionLabel?: string;
 		onAction?: () => void;
@@ -17,12 +17,12 @@
 	}
 
 	let {
-		activeLink = 'workspace',
+		activeLink = 'projects',
 		onLogoClick,
 		actionLabel,
 		onAction,
-		wide = false,
-		compact = false,
+		wide = true,
+		compact = true,
 		showBack = false,
 		onBackClick,
 		projectName = '',
@@ -64,7 +64,7 @@
 <nav class="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-zinc-800 sticky top-0 z-40 transition-colors duration-200">
 	<div class="{wide ? 'w-full' : 'max-w-7xl mx-auto'} px-6 {compact ? 'py-3' : 'py-3.5'} flex items-center justify-between">
 		
-		<!-- BRAND LOGO & OPTIONAL BACK BUTTON -->
+		<!-- BRAND LOGO, OPTIONAL BACK BUTTON & TITLE -->
 		<div class="flex items-center gap-4">
 			{#if showBack}
 				<button
@@ -78,8 +78,12 @@
 			{/if}
 
 			<div
-				class="flex items-center gap-3 {onLogoClick ? 'cursor-pointer group' : ''}"
-				onclick={onLogoClick}
+				class="flex items-center gap-3 cursor-pointer group"
+				onclick={() => {
+					sessionStorage.setItem('user_pressed_home', 'true');
+					if (onLogoClick) onLogoClick();
+					else goto('/');
+				}}
 			>
 				<div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-sm shadow-indigo-500/20 group-hover:scale-105 transition-transform duration-200">
 					<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -96,14 +100,21 @@
 			</div>
 		</div>
 
-		<!-- NAVIGATION LINKS & ACTIONS -->
+		<!-- NAVIGATION LINKS & ACTIONS CONNECTED TOGETHER ON THE RIGHT -->
 		<div class="flex items-center gap-6">
 			<a
-				href={projectId ? `/workspace/${projectId}` : '/workspace'}
-				class={activeLink === 'workspace'
+				href="/"
+				onclick={() => sessionStorage.setItem('user_pressed_home', 'true')}
+				class={activeLink === 'home'
 					? `text-indigo-600 dark:text-indigo-400 font-semibold border-b-2 border-indigo-600 dark:border-indigo-400 ${compact ? 'pb-3.5 -mb-3.5' : 'pb-4 -mb-4'}`
 					: 'text-slate-500 dark:text-zinc-400 font-medium hover:text-slate-900 dark:hover:text-white transition-colors'}
-			>Workspace</a>
+			>Home</a>
+			<a
+				href={projectId ? `/projects/${projectId}` : '/projects'}
+				class={activeLink === 'projects' || activeLink === 'workspace'
+					? `text-indigo-600 dark:text-indigo-400 font-semibold border-b-2 border-indigo-600 dark:border-indigo-400 ${compact ? 'pb-3.5 -mb-3.5' : 'pb-4 -mb-4'}`
+					: 'text-slate-500 dark:text-zinc-400 font-medium hover:text-slate-900 dark:hover:text-white transition-colors'}
+			>Projects</a>
 			<a
 				href={projectId ? `/datasheets?project=${projectId}` : '/datasheets'}
 				class={activeLink === 'datasheets'

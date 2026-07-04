@@ -186,8 +186,8 @@
 	<NavBar 
 		activeLink="datasheets" 
 		showBack={true} 
-		onLogoClick={projectId ? () => goto(`/workspace/${projectId}`) : () => goto('/')} 
-		onBackClick={projectId ? () => goto(`/workspace/${projectId}`) : () => goto('/workspace')}
+		onLogoClick={projectId ? () => goto(`/projects/${projectId}`) : () => goto('/')} 
+		onBackClick={projectId ? () => goto(`/projects/${projectId}`) : () => goto('/projects')}
 		projectName={projectName}
 		projectId={projectId}
 	/>

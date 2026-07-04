@@ -18,26 +18,37 @@
 </script>
 
 <!-- ROOT LAYOUT WRAPPER -->
-<div class="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 font-sans transition-colors duration-200 relative">
+<div class="min-h-screen bg-slate-50 dark:bg-zinc-950 text-slate-900 dark:text-zinc-100 font-sans transition-colors duration-200 relative overflow-x-hidden">
 	{#if $navigating}
-		<!-- Sleek Top Progress Bar -->
-		<div transition:fade={{ duration: 150 }} class="fixed top-0 left-0 right-0 h-1 z-50 overflow-hidden bg-blue-100 dark:bg-blue-950/50">
-			<div class="h-full bg-gradient-to-r from-blue-600 via-indigo-500 to-cyan-400 animate-pulse w-full transition-all"></div>
-		</div>
-
-		<!-- Subtle Ghost Shimmer Overlay -->
-		<div transition:fade={{ duration: 150 }} class="fixed inset-0 z-40 pointer-events-none flex items-center justify-center bg-white/30 dark:bg-zinc-950/30 backdrop-blur-[1px]">
-			<div class="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-xl animate-pulse">
-				<div class="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-				<span class="text-xs font-semibold text-slate-700 dark:text-zinc-200 tracking-wide">Loading Screen…</span>
-			</div>
+		<!-- Thin animated progress bar for network loading feedback -->
+		<div transition:fade={{ duration: 120 }} class="fixed top-0 left-0 right-0 h-[2px] z-[100] overflow-hidden bg-blue-100 dark:bg-blue-950/50">
+			<div class="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 w-full nav-progress-bar"></div>
 		</div>
 	{/if}
 
-	{@render children()}
+	<!-- Page content rendered cleanly without artificial fading or black flashes -->
+	<div class="w-full min-h-screen flex flex-col">
+		{@render children()}
+	</div>
 </div>
 
-<style global>
+<style>
+	.nav-progress-bar {
+		animation: progress-sweep 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+	}
+
+	@keyframes progress-sweep {
+		0% {
+			transform: translateX(-100%);
+		}
+		50% {
+			transform: translateX(0%);
+		}
+		100% {
+			transform: translateX(100%);
+		}
+	}
+
 	:global(html, body) {
 		margin: 0;
 		padding: 0;

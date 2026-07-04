@@ -17,7 +17,7 @@
 				password
 			});
 			authUser.login(user, token);
-			window.location.href = '/workspace';
+			window.location.href = '/projects';
 		} catch (err: any) {
 			error = err.message;
 		} finally {

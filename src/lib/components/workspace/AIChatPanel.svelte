@@ -60,13 +60,17 @@
 		}
 	}
 
-	async function loadSessions() {
+	async function loadSessions(selectNewest = false) {
 		if (!workspaceId) return;
 		try {
 			const list = await api.get<Session[]>(`/projects/${workspaceId}/chat/sessions`);
 			sessions = list;
-			if (list.length > 0 && !activeSessionId) {
-				activeSessionId = list[0]._id;
+			if (list.length > 0) {
+				if (selectNewest) {
+					activeSessionId = list[list.length - 1]._id;
+				} else if (!activeSessionId) {
+					activeSessionId = list[0]._id;
+				}
 			}
 		} catch (e) {
 			console.error('Failed to load chat sessions:', e);
@@ -138,10 +142,15 @@
 				await loadSessions();
 			}
 		};
+		const handleChatReset = async () => {
+			if (workspaceId) {
+				await loadSessions(true);
+			}
+		};
 		loadInitial();
-		window.addEventListener('chat-reset', loadInitial);
+		window.addEventListener('chat-reset', handleChatReset);
 		return () => {
-			window.removeEventListener('chat-reset', loadInitial);
+			window.removeEventListener('chat-reset', handleChatReset);
 			if (pollingInterval) clearInterval(pollingInterval);
 		};
 	});
