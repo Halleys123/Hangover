@@ -125,23 +125,8 @@
 			const form = new FormData();
 			form.append('multi', pendingFiles.length > 1 ? 'true' : 'false');
 			pendingFiles.forEach(f => form.append('files', f));
-			if (projectId) {
-				form.append('projectId', projectId);
-			}
 			const res = await api.upload<Datasheet | Datasheet[]>('/datasheets', form);
 			const newSheets = Array.isArray(res) ? res : [res];
-
-			const activeProject = $page.url.searchParams.get('project');
-			if (activeProject) {
-				for (const s of newSheets) {
-					try {
-						await api.post(`/projects/${activeProject}/datasheets`, { datasheetId: s._id });
-						projectDatasheetIds.push(s._id);
-					} catch (e) {
-						console.error('Failed to link uploaded datasheet to project:', e);
-					}
-				}
-			}
 
 			datasheets = [...newSheets, ...datasheets];
 			pendingFiles = [];

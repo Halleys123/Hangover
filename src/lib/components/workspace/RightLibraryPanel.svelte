@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { api } from '$lib/api';
 	import type { Comp, Sheet } from '$lib/types/index.js';
 
@@ -186,6 +187,10 @@
 		}
 	}
 
+	let showImproveModal = $state(false);
+	let attachedSheetName = $state('');
+	let improvingDataset = $state(false);
+
 	async function attachDatasheet(sheet: Sheet) {
 		if (!workspaceId) return;
 		attachingSheetId = sheet._id;
@@ -194,12 +199,32 @@
 			projectDatasheets = [...projectDatasheets, sheet];
 			// Notify parent via callback instead of window event bus
 			onDatasheetAttached?.();
+			attachedSheetName = sheet.name;
+			showImproveModal = true;
 		} catch (err) {
 			console.error('Failed to attach datasheet:', err);
 		} finally {
 			attachingSheetId = null;
 			showAttachModal = false;
 		}
+	}
+
+	async function confirmImproveDataset() {
+		if (!workspaceId) return;
+		improvingDataset = true;
+		try {
+			await api.post(`/projects/${workspaceId}/improve-dataset`, {});
+			showImproveModal = false;
+		} catch (err) {
+			console.error('Failed to improve dataset:', err);
+		} finally {
+			improvingDataset = false;
+		}
+	}
+
+	function handleUploadMoreDatasheets() {
+		showImproveModal = false;
+		goto(workspaceId ? `/datasheets?project=${workspaceId}` : '/datasheets');
 	}
 
 	async function detachDatasheet(sheetId: string, e: MouseEvent) {
@@ -436,6 +461,58 @@
 						</div>
 					{/each}
 				{/if}
+			</div>
+		</div>
+	</div>
+{/if}
+
+<!-- Improve Dataset Confirmation Modal -->
+{#if showImproveModal}
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 dark:bg-black/60 p-4 backdrop-blur-sm"
+		role="dialog"
+		aria-modal="true"
+	>
+		<div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden transition-colors">
+			<div class="px-5 py-4 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between bg-slate-50 dark:bg-zinc-800/50">
+				<div class="flex items-center gap-2.5">
+					<div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+					</div>
+					<h3 class="text-sm font-bold text-slate-900 dark:text-white">Knowledge Graph Synthesis</h3>
+				</div>
+			</div>
+			<div class="p-5 space-y-3 text-xs text-slate-600 dark:text-zinc-300">
+				<p class="leading-relaxed">
+					You attached <span class="font-semibold text-slate-900 dark:text-white">"{attachedSheetName}"</span> to this project workspace.
+				</p>
+				<p class="leading-relaxed font-medium text-slate-800 dark:text-zinc-200">
+					Have you added all the datasheets required for your circuit design?
+				</p>
+				<div class="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/50 rounded-lg text-[11px] text-blue-800 dark:text-blue-300 leading-normal">
+					⚡ Once all required documents are attached, we will run Cognee's AI improve API to build the unified hardware knowledge graph.
+				</div>
+			</div>
+			<div class="px-5 py-3.5 bg-slate-50 dark:bg-zinc-800/50 border-t border-slate-200 dark:border-zinc-800 flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5">
+				<button
+					onclick={handleUploadMoreDatasheets}
+					disabled={improvingDataset}
+					class="w-full sm:w-auto px-4 py-2 border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-xs font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-700 transition"
+				>
+					No, upload more datasheets
+				</button>
+				<button
+					onclick={confirmImproveDataset}
+					disabled={improvingDataset}
+					class="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm disabled:opacity-50 flex items-center justify-center gap-1.5 transition"
+				>
+					{#if improvingDataset}
+						<svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+						Synthesizing...
+					{:else}
+						Yes, synthesize knowledge graph
+					{/if}
+				</button>
 			</div>
 		</div>
 	</div>
