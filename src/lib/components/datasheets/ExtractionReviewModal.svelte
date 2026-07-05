@@ -1,23 +1,13 @@
 <script lang="ts">
 	import { fade, scale } from 'svelte/transition';
 	import { api } from '$lib/api';
-
-	interface Datasheet {
-		_id: string;
-		name: string;
-		size: string;
-		parsed: boolean;
-		status?: 'waiting' | 'processing' | 'completed' | 'failed';
-		verificationStatus?: 'unverified' | 'accepted' | 'rejected';
-		userNotes?: string;
-		uploadedAt: string;
-		cogneeConfig: Record<string, unknown> | null;
-	}
+	import ErrorBanner from '$lib/components/ui/ErrorBanner.svelte';
+	import type { Sheet } from '$lib/types/index.js';
 
 	interface Props {
-		datasheet: Datasheet | null;
+		datasheet: Sheet | null;
 		onClose: () => void;
-		onUpdated: (updated: Datasheet) => void;
+		onUpdated: (updated: Sheet) => void;
 	}
 
 	let { datasheet, onClose, onUpdated }: Props = $props();
@@ -28,6 +18,7 @@
 	let feedbackText = $state('');
 	let editedSpecsJson = $state('');
 	let jsonError = $state('');
+	let actionError = $state('');
 	let loadingAction = $state(false);
 
 	$effect(() => {
@@ -35,19 +26,21 @@
 			editedSpecsJson = JSON.stringify(datasheet.cogneeConfig, null, 2);
 		}
 		feedbackText = datasheet?.userNotes || '';
+		actionError = '';
 	});
 
 	async function handleAccept() {
 		if (!datasheet) return;
 		loadingAction = true;
+		actionError = '';
 		try {
-			const updated = await api.patch<Datasheet>(`/datasheets/${datasheet._id}/review`, {
+			const updated = await api.patch<Sheet>(`/datasheets/${datasheet._id}/review`, {
 				action: 'accept'
 			});
 			onUpdated(updated);
 			onClose();
 		} catch (err: any) {
-			alert(err.message || 'Failed to accept specifications');
+			actionError = err.message || 'Failed to accept specifications. Please try again.';
 		} finally {
 			loadingAction = false;
 		}
@@ -61,6 +54,7 @@
 		}
 
 		jsonError = '';
+		actionError = '';
 		let parsedSpecs = null;
 		try {
 			parsedSpecs = JSON.parse(editedSpecsJson);
@@ -71,7 +65,7 @@
 
 		loadingAction = true;
 		try {
-			const updated = await api.patch<Datasheet>(`/datasheets/${datasheet._id}/review`, {
+			const updated = await api.patch<Sheet>(`/datasheets/${datasheet._id}/review`, {
 				action: 'improve',
 				feedback: feedbackText.trim(),
 				updatedSpecs: parsedSpecs
@@ -80,7 +74,7 @@
 			isImproving = false;
 			onClose();
 		} catch (err: any) {
-			alert(err.message || 'Failed to save improvements');
+			actionError = err.message || 'Failed to save improvements. Please try again.';
 		} finally {
 			loadingAction = false;
 		}
@@ -89,15 +83,16 @@
 	async function handleAiRefine() {
 		if (!datasheet) return;
 		refiningAi = true;
+		actionError = '';
 		try {
-			const updated = await api.post<Datasheet>(`/datasheets/${datasheet._id}/refine`, {
+			const updated = await api.post<Sheet>(`/datasheets/${datasheet._id}/refine`, {
 				prompt: feedbackText.trim()
 			});
 			onUpdated(updated);
 			isImproving = false;
 			onClose();
 		} catch (err: any) {
-			alert(err.message || 'AI refinement failed');
+			actionError = err.message || 'AI refinement failed. Please try again.';
 		} finally {
 			refiningAi = false;
 		}
@@ -105,16 +100,21 @@
 
 	async function handleForget() {
 		if (!datasheet) return;
-		if (!confirm('Are you sure you want to forget and discard all extracted knowledge for this datasheet?')) return;
+		// Use a more accessible confirmation approach
+		const confirmed = window.confirm(
+			'Are you sure you want to forget and discard all extracted knowledge for this datasheet?'
+		);
+		if (!confirmed) return;
 		loadingAction = true;
+		actionError = '';
 		try {
-			const updated = await api.patch<Datasheet>(`/datasheets/${datasheet._id}/review`, {
+			const updated = await api.patch<Sheet>(`/datasheets/${datasheet._id}/review`, {
 				action: 'forget'
 			});
 			onUpdated(updated);
 			onClose();
 		} catch (err: any) {
-			alert(err.message || 'Failed to discard specifications');
+			actionError = err.message || 'Failed to discard specifications.';
 		} finally {
 			loadingAction = false;
 		}
@@ -122,19 +122,28 @@
 </script>
 
 {#if datasheet}
-<div transition:fade={{ duration: 150 }} class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/70 backdrop-blur-sm">
-	<div transition:scale={{ duration: 180, start: 0.95 }} class="w-full max-w-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-		
+<div
+	transition:fade={{ duration: 150 }}
+	class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/70 backdrop-blur-sm"
+	onclick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+	role="dialog"
+	aria-modal="true"
+	aria-labelledby="review-modal-title"
+>
+	<div
+		transition:scale={{ duration: 180, start: 0.95 }}
+		class="w-full max-w-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+	>
 		<!-- Modal Header -->
 		<div class="px-6 py-5 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between bg-slate-50/80 dark:bg-zinc-900/80">
 			<div class="flex items-center gap-3">
 				<div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
 					</svg>
 				</div>
 				<div>
-					<h3 class="text-base font-bold text-slate-900 dark:text-white truncate max-w-md">{datasheet.name}</h3>
+					<h3 id="review-modal-title" class="text-base font-bold text-slate-900 dark:text-white truncate max-w-md">{datasheet.name}</h3>
 					<div class="flex items-center gap-2 mt-0.5">
 						<span class="text-xs text-slate-500 dark:text-zinc-400">Cognee Knowledge Graph</span>
 						{#if datasheet.verificationStatus === 'accepted'}
@@ -147,19 +156,18 @@
 					</div>
 				</div>
 			</div>
-			<button onclick={onClose} class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-zinc-800 transition">
+			<button onclick={onClose} class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-zinc-800 transition" aria-label="Close modal">
 				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
 			</button>
 		</div>
 
 		<!-- Modal Body -->
 		<div class="p-6 overflow-y-auto flex-1 space-y-6">
+			<!-- Inline error display instead of alert() -->
+			<ErrorBanner message={actionError} onDismiss={() => (actionError = '')} />
+
 			<div class="bg-blue-50/60 dark:bg-indigo-950/30 border border-blue-200/60 dark:border-indigo-900/50 rounded-2xl p-4 text-xs text-blue-900 dark:text-indigo-200 leading-relaxed">
 				<strong>Why verify?</strong> Verified hardware parameters are indexed into your Cognee Knowledge Graph, allowing the AI Copilot to accurately inspect pin compatibility, logic voltage thresholds, and pull-up requirements during schematic prototyping.
-			</div>
-
-			<div class="bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-2xl p-4 text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
-				<strong>Note:</strong> This data is directly from the model after it is parsed, not from the database.
 			</div>
 
 			{#if !isImproving}
@@ -187,7 +195,7 @@
 				</div>
 			{:else}
 				<!-- Improve Mode: AI Refine or Manual JSON -->
-				<div class="space-y-4 animate-fadeIn">
+				<div class="space-y-4">
 					<div class="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-3">
 						<div class="flex gap-2">
 							<button
@@ -211,7 +219,7 @@
 					{#if improveTab === 'ai'}
 						<div class="p-4 bg-indigo-50/60 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/50 rounded-2xl space-y-3">
 							<p class="text-xs text-indigo-900 dark:text-indigo-200 leading-relaxed">
-								Instruct Cognee AI on what specific parameters, pinout terminals, or dimensional accuracy to re-extract or format deterministically. Or leave blank for an automatic deep engineering re-analysis.
+								Instruct Cognee AI on what specific parameters, pinout terminals, or dimensional accuracy to re-extract. Leave blank for automatic deep engineering re-analysis.
 							</p>
 							<div>
 								<label class="block text-[11px] font-bold text-indigo-950 dark:text-indigo-300 uppercase tracking-wider mb-1.5" for="ai-prompt">Refinement Prompt</label>
@@ -228,22 +236,21 @@
 									type="button"
 									onclick={handleAiRefine}
 									disabled={refiningAi}
-									class="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-500/20 transition flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+									class="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-500/20 transition flex items-center gap-2 disabled:opacity-50"
 								>
 									{#if refiningAi}
 										<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
 										Cognee Re-Analyzing...
 									{:else}
-										✨ AI Re-Analyze & Refine Specs
+										✨ AI Re-Analyze &amp; Refine Specs
 									{/if}
 								</button>
 							</div>
 						</div>
 					{:else}
 						{#if jsonError}
-							<div class="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-xl text-xs text-rose-600 dark:text-rose-400 font-medium">{jsonError}</div>
+							<ErrorBanner message={jsonError} onDismiss={() => (jsonError = '')} />
 						{/if}
-
 						<div>
 							<label class="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1.5" for="specs-json">Parameter Map (JSON)</label>
 							<textarea id="specs-json" bind:value={editedSpecsJson} rows="8" class="w-full font-mono text-xs p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-950 border border-slate-300 dark:border-zinc-800 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
@@ -258,7 +265,7 @@
 			<button
 				onclick={handleForget}
 				disabled={loadingAction || refiningAi}
-				class="px-4 py-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 text-xs font-bold rounded-xl border border-rose-200 dark:border-rose-900/60 transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+				class="px-4 py-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 text-xs font-bold rounded-xl border border-rose-200 dark:border-rose-900/60 transition flex items-center gap-1.5 disabled:opacity-50"
 			>
 				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
 				Forget / Discard
@@ -269,7 +276,7 @@
 					<button
 						onclick={handleImprove}
 						disabled={loadingAction || refiningAi}
-						class="px-4 py-2 bg-slate-200 dark:bg-zinc-800 hover:bg-slate-300 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-200 text-xs font-bold rounded-xl transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+						class="px-4 py-2 bg-slate-200 dark:bg-zinc-800 hover:bg-slate-300 dark:hover:bg-zinc-700 text-slate-800 dark:text-zinc-200 text-xs font-bold rounded-xl transition flex items-center gap-1.5 disabled:opacity-50"
 					>
 						✨ Improve / Refine with AI
 					</button>
@@ -277,7 +284,7 @@
 					<button
 						onclick={handleImprove}
 						disabled={loadingAction || refiningAi}
-						class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+						class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 disabled:opacity-50"
 					>
 						Save Manual JSON
 					</button>
@@ -295,7 +302,6 @@
 				{/if}
 			</div>
 		</div>
-
 	</div>
 </div>
 {/if}

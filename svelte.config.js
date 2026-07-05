@@ -7,11 +7,12 @@ export default {
       assets: 'build',
       fallback: 'index.html',
       precompress: false,
-      strict: true,
+      strict: false,
     }),
     prerender: {
-      crawl: true,
-      entries: ['*'],
+      // Don't crawl — this is a full SPA with a backend; no routes should be prerendered.
+      crawl: false,
+      entries: [],
     },
   },
 };

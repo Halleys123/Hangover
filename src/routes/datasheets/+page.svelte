@@ -2,23 +2,16 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { page } from '$app/stores';
 	import NavBar from '$lib/components/NavBar.svelte';
-	import { authUser, getToken } from '$lib/stores/auth';
+	import { authUser } from '$lib/stores/auth';
 	import { api } from '$lib/api';
 	import { goto } from '$app/navigation';
 	import ExtractionReviewModal from '$lib/components/datasheets/ExtractionReviewModal.svelte';
+	import ErrorBanner from '$lib/components/ui/ErrorBanner.svelte';
+	import type { Sheet } from '$lib/types/index.js';
 
-	interface Datasheet {
-		_id: string;
-		name: string;
-		size: string;
-		parsed: boolean;
-		status?: 'waiting' | 'processing' | 'completed' | 'failed';
-		error?: string;
-		verificationStatus?: 'unverified' | 'accepted' | 'rejected';
-		userNotes?: string;
-		uploadedAt: string;
-		cogneeConfig: Record<string, unknown> | null;
-	}
+	// Use centralized Sheet type (alias for local readability)
+	type Datasheet = Sheet;
+
 
 	interface Props {
 		// optional props
@@ -31,6 +24,7 @@
 	let pdfBlobUrl = $state<string | null>(null);
 	let loadingPdf = $state(false);
 	let uploadError = $state('');
+	let deleteError = $state('');
 	let pendingFiles = $state<File[]>([]);
 	let reviewModalSheet = $state<Datasheet | null>(null);
 
@@ -38,7 +32,7 @@
 	let projectName = $state('');
 	let projectDatasheetIds = $state<string[]>([]);
 
-	let pollTimer: any = null;
+	let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 	onMount(async () => {
 		if (!$authUser) { goto('/login'); return; }
@@ -78,7 +72,13 @@
 					} else {
 						datasheets = updated;
 					}
-				} catch { }
+				} catch (e) {
+					console.error('[datasheets] Poll error:', e);
+				}
+			} else {
+				// All datasheets processed — stop polling
+				clearInterval(pollTimer!);
+				pollTimer = null;
 			}
 		}, 3000);
 	});
@@ -93,14 +93,11 @@
 		selectedId = id;
 		loadingPdf = true;
 		try {
-			const token = getToken();
-			const res = await fetch(`http://localhost:3000/api/datasheets/${id}/file`, {
-				headers: token ? { Authorization: `Bearer ${token}` } : {}
-			});
-			if (!res.ok) throw new Error('Failed to load PDF');
-			const blob = await res.blob();
+			// Uses api.blob() — no raw fetch, no hardcoded localhost
+			const blob = await api.blob(`/datasheets/${id}/file`);
 			pdfBlobUrl = URL.createObjectURL(blob);
-		} catch {
+		} catch (e) {
+			console.error('Failed to load PDF:', e);
 			pdfBlobUrl = null;
 		} finally {
 			loadingPdf = false;
@@ -165,13 +162,14 @@
 
 	async function deleteDatasheet(id: string, e: MouseEvent) {
 		e.stopPropagation();
-		if (!confirm('Delete this datasheet?')) return;
+		if (!confirm('Delete this datasheet? This cannot be undone.')) return;
+		deleteError = '';
 		try {
 			await api.delete(`/datasheets/${id}`);
 			if (selectedId === id) { selectedId = null; if (pdfBlobUrl) { URL.revokeObjectURL(pdfBlobUrl); pdfBlobUrl = null; } }
 			datasheets = datasheets.filter((d) => d._id !== id);
 		} catch (err: any) {
-			alert(err.message);
+			deleteError = err.message || 'Failed to delete datasheet.';
 		}
 	}
 
@@ -229,9 +227,8 @@
 			<div class="p-4 border-b border-gray-200 dark:border-zinc-800">
 				<h2 class="text-sm font-semibold text-gray-900 dark:text-zinc-100 mb-3">Datasheet Library</h2>
 
-				{#if uploadError}
-				<div class="mb-2 p-2 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 rounded text-xs text-red-600 dark:text-red-400">{uploadError}</div>
-				{/if}
+				<ErrorBanner message={uploadError} onDismiss={() => (uploadError = '')} class="mb-2" />
+				<ErrorBanner message={deleteError} onDismiss={() => (deleteError = '')} class="mb-2" />
 
 				{#if pendingFiles.length > 0}
 					<div class="flex flex-col gap-2 p-3 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-900/50 mb-3">
