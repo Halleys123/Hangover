@@ -45,6 +45,12 @@
 					>
 						<div class="w-3 h-3 rounded-full {getPinColorClass(pin.color)}"></div>
 					</Handle>
+					<Handle
+						type="source"
+						position={Position.Left}
+						id={pin.id}
+						style="left: -20px; background: transparent; border: none; width: 12px; height: 12px; margin-top: -6px; opacity: 0;"
+					/>
 					<span class="text-[9px] text-slate-400 ml-1 font-bold whitespace-nowrap">{pin.label}</span>
 				</div>
 			{/each}
@@ -63,6 +69,12 @@
 					>
 						<div class="w-3 h-3 rounded-full {getPinColorClass(pin.color)}"></div>
 					</Handle>
+					<Handle
+						type="target"
+						position={Position.Right}
+						id={pin.id}
+						style="right: -20px; background: transparent; border: none; width: 12px; height: 12px; margin-top: -6px; opacity: 0;"
+					/>
 				</div>
 			{/each}
 		</div>

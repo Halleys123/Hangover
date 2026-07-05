@@ -124,10 +124,16 @@
 		try {
 			const form = new FormData();
 			form.append('multi', pendingFiles.length > 1 ? 'true' : 'false');
+			if (projectId) {
+				form.append('projectId', projectId);
+			}
 			pendingFiles.forEach(f => form.append('files', f));
 			const res = await api.upload<Datasheet | Datasheet[]>('/datasheets', form);
 			const newSheets = Array.isArray(res) ? res : [res];
 
+			if (projectId) {
+				projectDatasheetIds = Array.from(new Set([...projectDatasheetIds, ...newSheets.map(s => s._id)]));
+			}
 			datasheets = [...newSheets, ...datasheets];
 			pendingFiles = [];
 			if (newSheets.length > 0) selectedId = newSheets[0]._id;
@@ -179,10 +185,31 @@
 		<!-- Left: PDF Viewer -->
 		<div class="flex-1 flex flex-col bg-white dark:bg-zinc-900 border-r border-slate-200 dark:border-zinc-800 overflow-hidden">
 			{#if loadingPdf}
-				<div class="flex-1 flex items-center justify-center">
-					<div class="flex flex-col items-center gap-3 text-gray-400">
-						<div class="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-						<p class="text-sm">Loading PDF…</p>
+				<div class="flex-1 flex flex-col p-8 gap-6 animate-pulse bg-slate-50/80 dark:bg-zinc-900/50 overflow-hidden">
+					<div class="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-4">
+						<div class="flex items-center gap-3">
+							<div class="w-10 h-10 rounded-lg bg-gradient-to-br from-rose-200 to-rose-100 dark:from-rose-950/60 dark:to-zinc-800 shrink-0 shadow-inner"></div>
+							<div class="space-y-2">
+								<div class="h-4 w-48 bg-slate-200 dark:bg-zinc-800 rounded"></div>
+								<div class="h-3 w-24 bg-slate-100 dark:bg-zinc-800/60 rounded"></div>
+							</div>
+						</div>
+						<div class="h-8 w-24 bg-slate-200 dark:bg-zinc-800 rounded-lg"></div>
+					</div>
+					<div class="flex-1 border border-slate-200 dark:border-zinc-800/80 rounded-xl bg-white dark:bg-zinc-900 p-8 space-y-6 shadow-sm">
+						<div class="h-6 w-3/4 bg-slate-200 dark:bg-zinc-800 rounded"></div>
+						<div class="space-y-3 pt-4">
+							<div class="h-3 w-full bg-slate-100 dark:bg-zinc-800/70 rounded"></div>
+							<div class="h-3 w-full bg-slate-100 dark:bg-zinc-800/70 rounded"></div>
+							<div class="h-3 w-5/6 bg-slate-100 dark:bg-zinc-800/70 rounded"></div>
+							<div class="h-3 w-4/6 bg-slate-100 dark:bg-zinc-800/70 rounded"></div>
+						</div>
+						<div class="h-40 w-full bg-slate-100 dark:bg-zinc-800/50 rounded-lg my-6"></div>
+						<div class="space-y-3">
+							<div class="h-3 w-full bg-slate-100 dark:bg-zinc-800/70 rounded"></div>
+							<div class="h-3 w-11/12 bg-slate-100 dark:bg-zinc-800/70 rounded"></div>
+							<div class="h-3 w-3/4 bg-slate-100 dark:bg-zinc-800/70 rounded"></div>
+						</div>
 					</div>
 				</div>
 			{:else if pdfBlobUrl}
@@ -242,10 +269,17 @@
 
 			<div class="flex-1 overflow-y-auto">
 				{#if loading}
-					{#each [1, 2, 3, 4] as i (i)}
-					<div class="p-4 border-b border-gray-100 dark:border-zinc-800 animate-pulse">
-						<div class="h-4 bg-gray-200 dark:bg-zinc-800 rounded w-3/4 mb-2"></div>
-						<div class="h-3 bg-gray-100 dark:bg-zinc-700 rounded w-1/2"></div>
+					{#each [1, 2, 3, 4, 5] as i (i)}
+					<div class="p-4 border-b border-gray-100 dark:border-zinc-800/80 flex items-start gap-3.5 animate-pulse">
+						<div class="w-8 h-10 rounded-lg bg-gradient-to-br from-slate-200 to-slate-100 dark:from-zinc-800 dark:to-zinc-800/50 shrink-0 shadow-inner"></div>
+						<div class="flex-1 min-w-0 space-y-2 py-0.5">
+							<div class="h-3.5 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 dark:from-zinc-800 dark:via-zinc-700/50 dark:to-zinc-800 rounded-full w-3/4"></div>
+							<div class="flex items-center gap-2 pt-0.5">
+								<div class="h-3 bg-slate-200 dark:bg-zinc-800 rounded w-12"></div>
+								<div class="h-4 bg-slate-200/80 dark:bg-zinc-800/80 rounded-md w-16"></div>
+							</div>
+							<div class="h-2.5 bg-slate-100 dark:bg-zinc-800/60 rounded w-1/3 pt-1"></div>
+						</div>
 					</div>
 					{/each}
 				{:else if datasheets.length === 0}

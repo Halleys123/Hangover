@@ -277,7 +277,19 @@
 		</div>
 
 		{#if loadingComps}
-			{#each [1,2,3] as i (i)}<div class="mx-3 mb-2 h-14 bg-slate-100 dark:bg-zinc-800 rounded animate-pulse"></div>{/each}
+			<div class="space-y-2 px-3 pb-3">
+				{#each [1, 2, 3] as i (i)}
+				<div class="p-2.5 border border-slate-200/80 dark:border-zinc-800/80 rounded-lg bg-white/50 dark:bg-zinc-800/40 flex items-center justify-between gap-2.5 animate-pulse shadow-sm">
+					<div class="flex items-center gap-2.5 flex-1 min-w-0">
+						<div class="w-7 h-7 rounded-md bg-gradient-to-br from-slate-200 to-slate-100 dark:from-zinc-700 dark:to-zinc-800 shrink-0"></div>
+						<div class="flex-1 space-y-1.5 py-0.5 min-w-0">
+							<div class="h-3 bg-gradient-to-r from-slate-200 to-slate-100 dark:from-zinc-700 dark:to-zinc-800 rounded w-2/3"></div>
+							<div class="h-2 bg-slate-100 dark:bg-zinc-800 rounded w-5/6"></div>
+						</div>
+					</div>
+				</div>
+				{/each}
+			</div>
 		{:else if !hasPersonalMatches && componentSearchQuery}
 			<p class="px-3 pb-3 text-xs text-slate-400 dark:text-zinc-500">No results for "{componentSearchQuery}"</p>
 		{:else if myLibraryList.length === 0}
@@ -321,7 +333,7 @@
 		{/if}
 
 		<!-- Catalog Section -->
-		{#if hasAnalyzedDatasheet || availableCatalogList.length > 0}
+		{#if loadingComps || hasAnalyzedDatasheet || availableCatalogList.length > 0}
 			<div class="px-3 pt-1 pb-1 border-t border-slate-100 dark:border-zinc-800 mt-1">
 				<button onclick={() => (showCatalog = !showCatalog)} class="flex items-center gap-1 text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider hover:text-slate-600 dark:hover:text-zinc-300 w-full transition-colors">
 					<svg class="w-3 h-3 transition-transform {showCatalog ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
@@ -330,60 +342,81 @@
 			</div>
 
 			{#if showCatalog}
-				{#if pendingDatasheets.length > 0}
-					<div class="px-3 mb-3">
-						<p class="text-[10px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-							<span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span> Live AI Datasheet Indexing
-						</p>
-						<div class="space-y-1.5">
-							{#each pendingDatasheets as sheet (sheet._id)}
-								<div class="p-2.5 border border-amber-200 dark:border-amber-900/60 rounded bg-amber-50/50 dark:bg-amber-950/30 flex items-center justify-between text-xs">
-									<div class="min-w-0 flex items-center gap-2">
-										<svg class="w-4 h-4 text-amber-500 animate-spin shrink-0" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
-										<span class="font-medium text-slate-800 dark:text-zinc-200 truncate">{sheet.name}</span>
-									</div>
-									<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold uppercase">{sheet.status || 'parsing...'}</span>
+				{#if loadingComps}
+					<div class="space-y-2 px-3 pt-2 pb-3">
+						{#each [1, 2] as i (i)}
+						<div class="p-2.5 border border-dashed border-slate-200/80 dark:border-zinc-800/80 rounded-lg bg-slate-50/50 dark:bg-zinc-800/30 flex items-center justify-between gap-2.5 animate-pulse shadow-sm">
+							<div class="flex items-center gap-2.5 flex-1 min-w-0">
+								<div class="w-6 h-6 rounded bg-gradient-to-br from-slate-200 to-slate-100 dark:from-zinc-700 dark:to-zinc-800 shrink-0"></div>
+								<div class="flex-1 space-y-1.5 min-w-0">
+									<div class="h-3 bg-gradient-to-r from-slate-200 to-slate-100 dark:from-zinc-700 dark:to-zinc-800 rounded w-1/2"></div>
+									<div class="h-2 bg-slate-100 dark:bg-zinc-800 rounded w-3/4"></div>
 								</div>
-							{/each}
+							</div>
+							<div class="w-10 h-6 bg-slate-200 dark:bg-zinc-800 rounded shrink-0"></div>
 						</div>
+						{/each}
 					</div>
-				{/if}
-
-				{#each Object.entries(filteredCatalog) as [category, comps]}
-					<div class="px-3 mb-3">
-						<p class="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1.5">{category}</p>
-						<div class="space-y-1.5">
-							{#each comps as comp (comp.id ?? comp.name)}
-								<div class="p-2.5 border border-dashed border-slate-200 dark:border-zinc-800 rounded bg-slate-50 dark:bg-zinc-800/40 flex items-center gap-2.5 group transition-colors">
-									<div draggable="true" ondragstart={(e) => handleDragStart(e, comp)} class="flex-1 flex items-center gap-2 cursor-grab min-w-0">
-										<svg class="w-4 h-4 text-slate-300 dark:text-zinc-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m14-6h2m-2 6h2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
-										<div class="min-w-0">
-											<p class="text-xs font-semibold text-slate-700 dark:text-zinc-200 truncate">{comp.name}</p>
-											<p class="text-[10px] text-slate-400 dark:text-zinc-400 truncate">{comp.description}</p>
+				{:else}
+					{#if pendingDatasheets.length > 0}
+						<div class="px-3 mb-3">
+							<p class="text-[10px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+								<span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span> Live AI Datasheet Indexing
+							</p>
+							<div class="space-y-1.5">
+								{#each pendingDatasheets as sheet (sheet._id)}
+									<div class="p-2.5 border border-amber-200 dark:border-amber-900/60 rounded bg-amber-50/50 dark:bg-amber-950/30 flex items-center justify-between text-xs">
+										<div class="min-w-0 flex items-center gap-2">
+											<svg class="w-4 h-4 text-amber-500 animate-spin shrink-0" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+											<span class="font-medium text-slate-800 dark:text-zinc-200 truncate">{sheet.name}</span>
 										</div>
+										<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold uppercase">{sheet.status || 'parsing...'}</span>
 									</div>
-									<button
-										onclick={() => addToLibrary(comp)}
-										disabled={addingId === (comp.id ?? comp.name)}
-										class="shrink-0 px-2 py-1 bg-blue-50 dark:bg-blue-950/60 text-[10px] text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900 rounded font-bold disabled:opacity-50 transition-colors"
-									>
-										{addingId === (comp.id ?? comp.name) ? '…' : '+ Add'}
-									</button>
-								</div>
-							{/each}
+								{/each}
+							</div>
 						</div>
-					</div>
-				{/each}
+					{/if}
+
+					{#each Object.entries(filteredCatalog) as [category, comps]}
+						<div class="px-3 mb-3">
+							<p class="text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1.5">{category}</p>
+							<div class="space-y-1.5">
+								{#each comps as comp (comp.id ?? comp.name)}
+									<div class="p-2.5 border border-dashed border-slate-200 dark:border-zinc-800 rounded bg-slate-50 dark:bg-zinc-800/40 flex items-center gap-2.5 group transition-colors">
+										<div draggable="true" ondragstart={(e) => handleDragStart(e, comp)} class="flex-1 flex items-center gap-2 cursor-grab min-w-0">
+											<svg class="w-4 h-4 text-slate-300 dark:text-zinc-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m14-6h2m-2 6h2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
+											<div class="min-w-0">
+												<p class="text-xs font-semibold text-slate-700 dark:text-zinc-200 truncate">{comp.name}</p>
+												<p class="text-[10px] text-slate-400 dark:text-zinc-400 truncate">{comp.description}</p>
+											</div>
+										</div>
+										<button
+											onclick={() => addToLibrary(comp)}
+											disabled={addingId === (comp.id ?? comp.name)}
+											class="shrink-0 px-2 py-1 bg-blue-50 dark:bg-blue-950/60 text-[10px] text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900 rounded font-bold disabled:opacity-50 transition-colors"
+										>
+											{addingId === (comp.id ?? comp.name) ? '…' : '+ Add'}
+										</button>
+									</div>
+								{/each}
+							</div>
+						</div>
+					{/each}
+				{/if}
 			{/if}
 		{/if}
 	</div>
 
 {:else}
 	<!-- Datasheets Tab -->
-	<div class="p-3 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 transition-colors">
-		<button onclick={() => (showAttachModal = !showAttachModal)} class="flex items-center justify-center gap-2 w-full py-2 bg-slate-800 dark:bg-zinc-800 text-white text-xs font-medium rounded hover:bg-slate-700 dark:hover:bg-zinc-700 transition">
+	<div class="p-3 border-b border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 transition-colors flex gap-2">
+		<button onclick={() => (showAttachModal = !showAttachModal)} class="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-800 dark:bg-zinc-800 text-white text-xs font-medium rounded hover:bg-slate-700 dark:hover:bg-zinc-700 transition">
 			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
 			Attach from Library
+		</button>
+		<button onclick={() => goto(`/datasheets?project=${workspaceId}`)} class="flex-1 flex items-center justify-center gap-1.5 py-2 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition">
+			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+			Upload New PDF
 		</button>
 	</div>
 
@@ -393,7 +426,25 @@
 		</div>
 
 		{#if loadingSheets}
-			{#each [1,2] as i (i)}<div class="mx-3 mb-2 h-14 bg-slate-100 dark:bg-zinc-800 rounded animate-pulse"></div>{/each}
+			<div class="space-y-2 px-3 pb-3">
+				{#each [1, 2, 3] as i (i)}
+				<div class="p-3 border border-slate-200/80 dark:border-zinc-800/80 rounded-lg bg-white/50 dark:bg-zinc-800/40 flex items-center justify-between gap-2.5 animate-pulse shadow-sm">
+					<div class="flex items-center gap-2.5 flex-1 min-w-0">
+						<div class="w-8 h-8 rounded-md bg-gradient-to-br from-rose-200/60 to-rose-100/40 dark:from-rose-950/40 dark:to-zinc-800 shrink-0 flex items-center justify-center">
+							<div class="w-4 h-4 rounded bg-rose-300/60 dark:bg-rose-800/40"></div>
+						</div>
+						<div class="flex-1 space-y-1.5 py-0.5 min-w-0">
+							<div class="h-3 bg-gradient-to-r from-slate-200 to-slate-100 dark:from-zinc-700 dark:to-zinc-800 rounded w-3/4"></div>
+							<div class="flex items-center gap-2">
+								<div class="h-2 bg-slate-100 dark:bg-zinc-800 rounded w-10"></div>
+								<div class="h-2 bg-slate-200 dark:bg-zinc-700/60 rounded-full w-14"></div>
+							</div>
+						</div>
+					</div>
+					<div class="w-5 h-5 rounded bg-slate-100 dark:bg-zinc-800 shrink-0"></div>
+				</div>
+				{/each}
+			</div>
 		{:else if projectDatasheets.length === 0}
 			<div class="px-3 pb-3 text-xs text-slate-400 dark:text-zinc-500">
 				No datasheets attached to this project yet. Use "Attach from Library" above.
